@@ -1,0 +1,76 @@
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Dapp Demo</title>
+</head>
+
+<body>
+    <div style="text-align:center;margin-top:30px;">
+        <div style="text-align:center">
+            <button onclick="connectWallet()">连接钱包</button>
+            <button onclick="runContract()">调用合约</button>
+        </div>
+        <div style="margin-top:10px" id="account">账户：</div>
+        <div style="margin-top:10px;" id="contract">合约：</div>
+
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.6.2/ethers.umd.min.js"></script>
+    <script>
+        const contractAddress = "0x3aae935604266f2f1da30b32a983d825c4cbd335";
+        const contractAbi = [
+            {
+                "inputs": [],
+                "name": "greet",
+                "outputs": [
+                    {
+                        "internalType": "string",
+                        "name": "",
+                        "type": "string"
+                    }
+                ],
+                "stateMutability": "pure",
+                "type": "function"
+            }
+        ];
+
+        let provider;
+        let signer;
+        let contract;
+
+        async function connectWallet() {
+            if (typeof window.ethereum === 'undefined') {
+                alert('plz connect to metamask');
+                return;
+            }
+
+            try{
+                provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+                const address = await signer.getAddress();
+                document.getElementById('account').innerText = 'Account:' + address;
+                contract = new ethers.Contract(contractAddress, contractAbi, signer);
+            } catch(error){
+                console.error("failed to connect wallet:", error);
+                alert("Failed to connect wallet, find more information in console.");
+            }
+
+        }
+        async function runContract(){
+            if (!contract){
+                alert("connect metamask");
+                return;
+            }
+
+            try{
+                let result = await contract.greet();
+                document.getElementById("contract").innerText = "Contract Result: " + result;
+            } catch (error){
+                console.error("Failed to call contract: ", error);
+                alert("Failed to call contract");
+            }
+        }
+    </script>
+</body>
+
+</html>
