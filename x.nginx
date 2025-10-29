@@ -1,0 +1,18 @@
+# Simplified Version
+upstream backend_servers {
+    server 192.168.1.10:8000;  # WebServer A
+    server 192.168.1.11:8000;  # WebServer B
+    server 192.168.1.12:8000;  # WebServer C
+}
+server {
+    listen 80;
+    location /api/ {
+        proxy_pass http://backend_servers;
+    }
+    location /static/ {
+        root /var/www/html;
+    }
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
