@@ -1,0 +1,39 @@
+@startuml
+left to right direction
+
+skinparam ActorBorderColor black
+skinparam UseCaseBorderColor black
+skinparam RectangleBorderColor orange
+skinparam ArrowColor #757575
+
+actor Player #4CAF50
+actor "Contract Owner" as Owner #4CAF50
+
+rectangle "Minority Wins Game System" #FF9800 {
+  usecase "Connect Wallet" as UC1 #2196F3
+  usecase "Start Game" as UC2 #2196F3
+  usecase "Commit Bet" as UC3 #2196F3
+  usecase "Reveal Choice" as UC4 #2196F3
+  usecase "Finalize Game" as UC5 #2196F3
+  usecase "Claim Reward" as UC6 #2196F3
+  usecase "Get Game Info" as UC7 #2196F3
+  usecase "Calculate Reward" as UC8 #2196F3
+  usecase "Check Participants" as UC9 #2196F3
+}
+
+Player --> UC1
+Player --> UC3
+Player --> UC4
+Player --> UC6
+Player --> UC7
+Player --> UC8
+Player --> UC9
+
+Owner --> UC2
+Owner --> UC5
+Owner --> UC7
+
+UC3 ..> UC4 : <<extend>>
+UC4 ..> UC5 : <<extend>>
+UC5 ..> UC6 : <<extend>>
+@enduml

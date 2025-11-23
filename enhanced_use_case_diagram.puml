@@ -1,0 +1,69 @@
+@startuml
+left to right direction
+
+title Minority Wins Game - Enhanced Use Case Diagram
+
+skinparam ActorBorderColor black
+skinparam UseCaseBorderColor black
+skinparam RectangleBorderColor orange
+skinparam ArrowColor #757575
+
+actor Player #4CAF50
+actor "Contract Owner" as Owner #4CAF50
+actor "Oracle Service" as Oracle #9C27B0
+
+rectangle "Minority Wins Game System" #FF9800 {
+  ' Core Game Functions
+  usecase "Connect Wallet" as UC1 #2196F3
+  usecase "Start Game" as UC2 #2196F3
+  usecase "Commit Bet" as UC3 #2196F3
+  usecase "Reveal Choice" as UC4 #2196F3
+  usecase "Finalize Game" as UC5 #2196F3
+  usecase "Claim Reward" as UC6 #2196F3
+  
+  ' Enhanced Features
+  usecase "View Game History" as UC7 #FF5722
+  usecase "Use Reward Calculator" as UC8 #FF5722
+  usecase "Multi-Option Betting" as UC9 #FF5722
+  usecase "NFT Reward System" as UC10 #FF5722
+  usecase "Tiered Game Rooms" as UC11 #FF5722
+  
+  ' Admin Functions
+  usecase "Manage Deposit Distribution" as UC12 #795548
+  usecase "Configure Game Parameters" as UC13 #795548
+}
+
+' Player interactions
+Player --> UC1
+Player --> UC3
+Player --> UC4
+Player --> UC6
+Player --> UC7
+Player --> UC8
+Player --> UC9
+Player --> UC10
+
+' Owner interactions
+Owner --> UC2
+Owner --> UC5
+Owner --> UC12
+Owner --> UC13
+
+' Oracle integration
+Oracle --> UC5 : provides random data
+
+' Extension relationships
+UC3 ..> UC4 : <<extend>>
+UC4 ..> UC5 : <<extend>>
+UC5 ..> UC6 : <<extend>>
+UC9 ..|> UC3 : <<include>>
+UC11 ..|> UC2 : <<include>>
+
+legend
+  | Color Legend |
+  Blue = Core Functions |
+  Orange = Enhanced Features |
+  Brown = Admin Functions |
+  Purple = External Services
+endlegend
+@enduml
