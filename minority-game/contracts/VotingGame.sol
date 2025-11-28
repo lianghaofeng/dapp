@@ -248,6 +248,7 @@ contract VotingGame is ReentrancyGuard {
         }
     }
 
+    // 拆分成两个函数避免Stack too deep错误
     function getVoteInfo(uint256 voteId) external view returns (
         uint256 id,
         address creator,
@@ -276,6 +277,43 @@ contract VotingGame is ReentrancyGuard {
             vote.finalized,
             vote.winningOption,
             vote.createdAt
+        );
+    }
+
+    // 简化版本的查询函数（避免Stack too deep）
+    function getVoteBasicInfo(uint256 voteId) external view returns (
+        string memory question,
+        string[] memory options,
+        VoteStage stage,
+        uint256 commitEndTime,
+        uint256 revealEndTime
+    ) {
+        Vote storage vote = votes[voteId];
+        require(vote.voteId != 0, "Vote does not exist");
+
+        return (
+            vote.question,
+            voteOptions[voteId],
+            vote.stage,
+            vote.commitEndTime,
+            vote.revealEndTime
+        );
+    }
+
+    function getVoteStatus(uint256 voteId) external view returns (
+        uint256 totalBets,
+        bool finalized,
+        uint256 winningOption,
+        address creator
+    ) {
+        Vote storage vote = votes[voteId];
+        require(vote.voteId != 0, "Vote does not exist");
+
+        return (
+            vote.totalBets,
+            vote.finalized,
+            vote.winningOption,
+            vote.creator
         );
     }
 

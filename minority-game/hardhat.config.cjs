@@ -9,7 +9,8 @@ module.exports = {
       optimizer: {
         enabled: true,
         runs: 200
-      }
+      },
+      viaIR: true  // 启用IR优化，解决Stack too deep问题
     }
   },
   networks: {
