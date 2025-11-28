@@ -8,7 +8,7 @@ const CONTRACT_ABI = [
     "function finalizeVote(uint256 voteId) external",
     "function claimReward(uint256 voteId) external",
     "function calculateReward(uint256 voteId, address player) external view returns (uint256)",
-    "function getVoteInfo(uint256 voteId) external view returns (uint256 id, address creator, string memory question, string[] memory options, uint8 stage, uint256 commitEndTime, uint256 revealEndTime, uint256 totalBets, bool finalized, uint256 winningOption, uint256 createdAt)",
+    "function getVoteInfo(uint256 voteId) external view returns (tuple(uint256 voteId, address creator, string question, string[] options, uint8 stage, uint256 commitEndTime, uint256 revealEndTime, uint256 totalBets, bool finalized, uint256 winningOption, uint256 createdAt))",
     "function getOptionTotal(uint256 voteId, uint256 optionIndex) external view returns (uint256)",
     "function getCommit(uint256 voteId, address player) external view returns (bytes32 commitHash, bool revealed, uint256 choice, uint256 betAmount)",
     "function getParticipants(uint256 voteId) external view returns (address[] memory)",
