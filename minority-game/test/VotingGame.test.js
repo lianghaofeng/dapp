@@ -249,13 +249,12 @@ describe("VotingGame", function () {
         });
 
         it("应该正确计算少数派获胜", async function () {
-            // 所有玩家先commit
-            await doCommit(player1, 0, ethers.parseEther("1.0")); // Option 0, 1 ETH
-            await doCommit(player2, 1, ethers.parseEther("2.0")); // Option 1, 2 ETH
-            await doCommit(player3, 1, ethers.parseEther("3.0")); // Option 1, 3 ETH
-
-            // 统一reveal
-            await doRevealAll();
+            // 所有玩家自动commit和reveal
+            await commitAndRevealMultiple([
+                { player: player1, choice: 0, betAmount: ethers.parseEther("1.0") }, // Option 0, 1 ETH
+                { player: player2, choice: 1, betAmount: ethers.parseEther("2.0") }, // Option 1, 2 ETH
+                { player: player3, choice: 1, betAmount: ethers.parseEther("3.0") }  // Option 1, 3 ETH
+            ]);
 
             // Move to finalize
             await time.increase(REVEAL_DURATION + 1);
@@ -272,13 +271,12 @@ describe("VotingGame", function () {
         });
 
         it("应该正确计算奖励", async function () {
-            // 所有玩家先commit
-            await doCommit(player1, 0, ethers.parseEther("1.0")); // Option 0, 1 ETH (winner - minority)
-            await doCommit(player2, 1, ethers.parseEther("2.0")); // Option 1, 2 ETH
-            await doCommit(player3, 1, ethers.parseEther("3.0")); // Option 1, 3 ETH
-
-            // 统一reveal
-            await doRevealAll();
+            // 所有玩家自动commit和reveal
+            await commitAndRevealMultiple([
+                { player: player1, choice: 0, betAmount: ethers.parseEther("1.0") }, // Option 0, 1 ETH (winner)
+                { player: player2, choice: 1, betAmount: ethers.parseEther("2.0") }, // Option 1, 2 ETH
+                { player: player3, choice: 1, betAmount: ethers.parseEther("3.0") }  // Option 1, 3 ETH
+            ]);
 
             await time.increase(REVEAL_DURATION + 1);
             await votingGame.finalizeVote(voteId);
@@ -292,12 +290,11 @@ describe("VotingGame", function () {
         });
 
         it("应该允许获胜者领取奖励", async function () {
-            // 所有玩家先commit
-            await doCommit(player1, 0, ethers.parseEther("1.0"));
-            await doCommit(player2, 1, ethers.parseEther("2.0"));
-
-            // 统一reveal
-            await doRevealAll();
+            // 所有玩家自动commit和reveal
+            await commitAndRevealMultiple([
+                { player: player1, choice: 0, betAmount: ethers.parseEther("1.0") },
+                { player: player2, choice: 1, betAmount: ethers.parseEther("2.0") }
+            ]);
 
             await time.increase(REVEAL_DURATION + 1);
             await votingGame.finalizeVote(voteId);
@@ -315,12 +312,11 @@ describe("VotingGame", function () {
         });
 
         it("失败者不应该获得奖励", async function () {
-            // 所有玩家先commit
-            await doCommit(player1, 0, ethers.parseEther("1.0"));
-            await doCommit(player2, 1, ethers.parseEther("2.0"));
-
-            // 统一reveal
-            await doRevealAll();
+            // 所有玩家自动commit和reveal
+            await commitAndRevealMultiple([
+                { player: player1, choice: 0, betAmount: ethers.parseEther("1.0") },
+                { player: player2, choice: 1, betAmount: ethers.parseEther("2.0") }
+            ]);
 
             await time.increase(REVEAL_DURATION + 1);
             await votingGame.finalizeVote(voteId);
@@ -373,12 +369,11 @@ describe("VotingGame", function () {
             await votingGame.createVote("测试", ["A", "B"]);
             const voteId = 1;
 
-            // 所有玩家先commit
-            await doCommit(player1, 0, ethers.parseEther("1.0"));
-            await doCommit(player2, 1, ethers.parseEther("1.0"));
-
-            // 统一reveal
-            await doRevealAll();
+            // 所有玩家自动commit和reveal
+            await commitAndRevealMultiple([
+                { player: player1, choice: 0, betAmount: ethers.parseEther("1.0") },
+                { player: player2, choice: 1, betAmount: ethers.parseEther("1.0") }
+            ]);
 
             const participants = await votingGame.getParticipants(voteId);
             expect(participants.length).to.equal(2);
@@ -423,6 +418,17 @@ describe("VotingGame", function () {
         for (const [address, info] of commits.entries()) {
             await votingGame.connect(info.player).reveal(voteId, info.choice, info.secret);
         }
+    }
+
+    // 便捷函数：一次性完成多个玩家的commit和reveal
+    async function commitAndRevealMultiple(playerCommits) {
+        // playerCommits: [{player, choice, betAmount}, ...]
+        // 先让所有玩家commit
+        for (const c of playerCommits) {
+            await doCommit(c.player, c.choice, c.betAmount);
+        }
+        // 统一reveal
+        await doRevealAll();
     }
 
     // Reset helper for each test
