@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minority Wins - 投票游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: fadeInUp 0.8s ease-out;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .wallet-section {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        button.secondary:hover {
+            box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .status.success {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .status.error {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .status.info {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #004085;
+            border-left: 4px solid #17a2b8;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-top: 8px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .options-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .option-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .option-input-group input {
+            flex: 1;
+            margin: 0;
+        }
+
+        .option-input-group button {
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+
+        .vote-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .vote-card:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .vote-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .vote-card .vote-meta {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .vote-options {
+            display: grid;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .vote-option {
+            background: white;
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .vote-option:hover {
+            border-color: #667eea;
+            background: #f0f2ff;
+        }
+
+        .vote-option.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .badge.commit {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .badge.reveal {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .badge.finalized {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge.claiming {
+            background: #6f42c1;
+            color: white;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .wallet-info {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            color: #666;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: none;
+        }
+
+        .tab:hover {
+            color: #667eea;
+            transform: none;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2em;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .wallet-section {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 Minority Wins</h1>
+            <p>少数派获胜的链上投票游戏</p>
+        </header>
+
+        <!-- 钱包连接 -->
+        <div class="card">
+            <h2>💼 钱包连接</h2>
+            <div class="wallet-section">
+                <button id="connectWallet">连接 MetaMask</button>
+                <button id="disconnectWallet" class="secondary">断开连接</button>
+            </div>
+            <div id="walletStatus" class="status info" style="display: none;">
+                未连接钱包
+            </div>
+        </div>
+
+        <!-- Tab 导航 -->
+        <div class="card">
+            <div class="tabs">
+                <button class="tab active" data-tab="create">创建投票</button>
+                <button class="tab" data-tab="vote">参与投票</button>
+                <button class="tab" data-tab="my-votes">我的投票</button>
+            </div>
+
+            <!-- 创建投票 Tab -->
+            <div class="tab-content active" id="create-tab">
+                <h2>📝 创建新投票</h2>
+                <div class="form-group">
+                    <label for="voteQuestion">投票问题</label>
+                    <textarea id="voteQuestion" placeholder="输入你的投票问题..."></textarea>
+                </div>
+
+                <div class="options-container">
+                    <label>投票选项 (最少2个，最多10个)</label>
+                    <div id="optionsInputs">
+                        <div class="option-input-group">
+                            <input type="text" placeholder="选项 1" class="option-input">
+                        </div>
+                        <div class="option-input-group">
+                            <input type="text" placeholder="选项 2" class="option-input">
+                        </div>
+                    </div>
+                    <button id="addOption" class="secondary">➕ 添加选项</button>
+                </div>
+
+                <button id="createVote">🚀 创建投票</button>
+                <div id="createStatus"></div>
+            </div>
+
+            <!-- 参与投票 Tab -->
+            <div class="tab-content" id="vote-tab">
+                <h2>🗳️ 活跃的投票</h2>
+                <button id="refreshVotes" class="secondary">🔄 刷新</button>
+                <div id="activeVotesList"></div>
+            </div>
+
+            <!-- 我的投票 Tab -->
+            <div class="tab-content" id="my-votes-tab">
+                <h2>📊 我的投票记录</h2>
+                <button id="refreshMyVotes" class="secondary">🔄 刷新</button>
+                <div id="myVotesList"></div>
+            </div>
+        </div>
+
+        <!-- 投票详情弹窗 (通过 JavaScript 动态创建) -->
+        <div id="voteModal" style="display: none;"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.9.0/ethers.umd.min.js"></script>
+    <script type="module" src="voting.js"></script>
+</body>
+</html>
