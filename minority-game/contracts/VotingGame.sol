@@ -46,6 +46,21 @@ contract VotingGame is ReentrancyGuard {
         uint256 betAmount;
     }
 
+    // 用于返回投票信息的struct（避免Stack too deep）
+    struct VoteInfo {
+        uint256 voteId;
+        address creator;
+        string question;
+        string[] options;
+        VoteStage stage;
+        uint256 commitEndTime;
+        uint256 revealEndTime;
+        uint256 totalBets;
+        bool finalized;
+        uint256 winningOption;
+        uint256 createdAt;
+    }
+
     uint256 public voteCounter;
     mapping(uint256 => Vote) private votes;
     mapping(uint256 => string[]) public voteOptions;
@@ -248,36 +263,24 @@ contract VotingGame is ReentrancyGuard {
         }
     }
 
-    // 拆分成两个函数避免Stack too deep错误
-    function getVoteInfo(uint256 voteId) external view returns (
-        uint256 id,
-        address creator,
-        string memory question,
-        string[] memory options,
-        VoteStage stage,
-        uint256 commitEndTime,
-        uint256 revealEndTime,
-        uint256 totalBets,
-        bool finalized,
-        uint256 winningOption,
-        uint256 createdAt
-    ) {
+    // 使用struct返回避免Stack too deep错误
+    function getVoteInfo(uint256 voteId) external view returns (VoteInfo memory) {
         Vote storage vote = votes[voteId];
         require(vote.voteId != 0, "Vote does not exist");
 
-        return (
-            vote.voteId,
-            vote.creator,
-            vote.question,
-            voteOptions[voteId],
-            vote.stage,
-            vote.commitEndTime,
-            vote.revealEndTime,
-            vote.totalBets,
-            vote.finalized,
-            vote.winningOption,
-            vote.createdAt
-        );
+        return VoteInfo({
+            voteId: vote.voteId,
+            creator: vote.creator,
+            question: vote.question,
+            options: voteOptions[voteId],
+            stage: vote.stage,
+            commitEndTime: vote.commitEndTime,
+            revealEndTime: vote.revealEndTime,
+            totalBets: vote.totalBets,
+            finalized: vote.finalized,
+            winningOption: vote.winningOption,
+            createdAt: vote.createdAt
+        });
     }
 
     // 简化版本的查询函数（避免Stack too deep）

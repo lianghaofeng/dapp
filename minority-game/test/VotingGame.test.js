@@ -41,7 +41,7 @@ describe("VotingGame", function () {
 
             // 验证投票信息
             const voteInfo = await votingGame.getVoteInfo(1);
-            expect(voteInfo.id).to.equal(1);
+            expect(voteInfo.voteId).to.equal(1);
             expect(voteInfo.creator).to.equal(owner.address);
             expect(voteInfo.question).to.equal(question);
             expect(voteInfo.options).to.deep.equal(options);
@@ -101,26 +101,26 @@ describe("VotingGame", function () {
             const betAmount = ethers.parseEther("1.0");
             const secret = ethers.hexlify(ethers.randomBytes(32));
 
+            // 新的commitHash：只有4个参数（移除了betAmount）
             const commitHash = ethers.keccak256(
                 ethers.solidityPacked(
-                    ["uint256", "uint256", "uint256", "bytes32", "address"],
-                    [voteId, choice, betAmount, secret, player1.address]
+                    ["uint256", "uint256", "bytes32", "address"],
+                    [voteId, choice, secret, player1.address]
                 )
             );
 
-            const deposit = ethers.parseEther("0.5"); // 50% of bet
-
+            // 100%押金模式：直接支付全额
             const tx = await votingGame.connect(player1).commit(voteId, commitHash, {
-                value: deposit
+                value: betAmount
             });
 
             await expect(tx)
                 .to.emit(votingGame, "CommitSubmitted")
-                .withArgs(voteId, player1.address, deposit);
+                .withArgs(voteId, player1.address, betAmount);
 
             const commitInfo = await votingGame.getCommit(voteId, player1.address);
             expect(commitInfo.commitHash).to.equal(commitHash);
-            expect(commitInfo.depositAmount).to.equal(deposit);
+            expect(commitInfo.betAmount).to.equal(betAmount);
             expect(commitInfo.revealed).to.be.false;
         });
 
@@ -129,17 +129,17 @@ describe("VotingGame", function () {
 
             await expect(
                 votingGame.connect(player1).commit(voteId, commitHash, { value: 0 })
-            ).to.be.revertedWith("Deposit required");
+            ).to.be.revertedWith("Bet amount required");
         });
 
         it("不应该允许重复commit", async function () {
             const commitHash = ethers.hexlify(ethers.randomBytes(32));
-            const deposit = ethers.parseEther("0.5");
+            const betAmount = ethers.parseEther("0.5");
 
-            await votingGame.connect(player1).commit(voteId, commitHash, { value: deposit });
+            await votingGame.connect(player1).commit(voteId, commitHash, { value: betAmount });
 
             await expect(
-                votingGame.connect(player1).commit(voteId, commitHash, { value: deposit })
+                votingGame.connect(player1).commit(voteId, commitHash, { value: betAmount })
             ).to.be.revertedWith("Already committed");
         });
 
@@ -147,10 +147,10 @@ describe("VotingGame", function () {
             await time.increase(COMMIT_DURATION + 1);
 
             const commitHash = ethers.hexlify(ethers.randomBytes(32));
-            const deposit = ethers.parseEther("0.5");
+            const betAmount = ethers.parseEther("0.5");
 
             await expect(
-                votingGame.connect(player1).commit(voteId, commitHash, { value: deposit })
+                votingGame.connect(player1).commit(voteId, commitHash, { value: betAmount })
             ).to.be.revertedWith("Commit phase ended");
         });
     });
@@ -172,25 +172,25 @@ describe("VotingGame", function () {
             const betAmount = ethers.parseEther("1.0");
             const secret = ethers.hexlify(ethers.randomBytes(32));
 
+            // 新的commitHash：4个参数
             const commitHash = ethers.keccak256(
                 ethers.solidityPacked(
-                    ["uint256", "uint256", "uint256", "bytes32", "address"],
-                    [voteId, choice, betAmount, secret, player1.address]
+                    ["uint256", "uint256", "bytes32", "address"],
+                    [voteId, choice, secret, player1.address]
                 )
             );
 
-            const deposit = ethers.parseEther("0.5");
-            await votingGame.connect(player1).commit(voteId, commitHash, { value: deposit });
+            // 100%支付
+            await votingGame.connect(player1).commit(voteId, commitHash, { value: betAmount });
 
             // Move to reveal phase
             await time.increase(COMMIT_DURATION + 1);
             await votingGame.startRevealPhase(voteId);
 
-            // Reveal
+            // 新的reveal：3个参数（移除了betAmount）
             const tx = await votingGame.connect(player1).reveal(
                 voteId,
                 choice,
-                betAmount,
                 secret
             );
 
@@ -206,11 +206,10 @@ describe("VotingGame", function () {
 
         it("不应该允许在commit阶段揭示", async function () {
             const choice = 0;
-            const betAmount = ethers.parseEther("1.0");
             const secret = ethers.hexlify(ethers.randomBytes(32));
 
             await expect(
-                votingGame.connect(player1).reveal(voteId, choice, betAmount, secret)
+                votingGame.connect(player1).reveal(voteId, choice, secret)
             ).to.be.revertedWith("Not in reveal phase");
         });
 
@@ -221,45 +220,20 @@ describe("VotingGame", function () {
 
             const commitHash = ethers.keccak256(
                 ethers.solidityPacked(
-                    ["uint256", "uint256", "uint256", "bytes32", "address"],
-                    [voteId, choice, betAmount, secret, player1.address]
+                    ["uint256", "uint256", "bytes32", "address"],
+                    [voteId, choice, secret, player1.address]
                 )
             );
 
-            const deposit = ethers.parseEther("0.5");
-            await votingGame.connect(player1).commit(voteId, commitHash, { value: deposit });
+            await votingGame.connect(player1).commit(voteId, commitHash, { value: betAmount });
 
             await time.increase(COMMIT_DURATION + 1);
             await votingGame.startRevealPhase(voteId);
 
             // Try to reveal with wrong choice
             await expect(
-                votingGame.connect(player1).reveal(voteId, 1, betAmount, secret)
+                votingGame.connect(player1).reveal(voteId, 1, secret)
             ).to.be.revertedWith("Hash mismatch");
-        });
-
-        it("不应该允许deposit金额不在有效范围内", async function () {
-            const choice = 0;
-            const betAmount = ethers.parseEther("1.0");
-            const secret = ethers.hexlify(ethers.randomBytes(32));
-
-            const commitHash = ethers.keccak256(
-                ethers.solidityPacked(
-                    ["uint256", "uint256", "uint256", "bytes32", "address"],
-                    [voteId, choice, betAmount, secret, player1.address]
-                )
-            );
-
-            // Deposit too low (< 30%)
-            const lowDeposit = ethers.parseEther("0.2");
-            await votingGame.connect(player1).commit(voteId, commitHash, { value: lowDeposit });
-
-            await time.increase(COMMIT_DURATION + 1);
-            await votingGame.startRevealPhase(voteId);
-
-            await expect(
-                votingGame.connect(player1).reveal(voteId, choice, betAmount, secret)
-            ).to.be.revertedWith("Invalid deposit amount");
         });
     });
 
@@ -311,12 +285,12 @@ describe("VotingGame", function () {
             await time.increase(COMMIT_DURATION + REVEAL_DURATION + 1);
             await votingGame.finalizeVote(voteId);
 
-            // Player1 should get: their bet (1) + deposit (0.5) + all losing bets (5)
+            // 100%押金模式：Player1应该获得自己的1 ETH + 失败者的5 ETH = 6 ETH
             const reward = await votingGame.calculateReward(voteId, player1.address);
 
-            // Reward = betAmount + deposit + (losingTotal * betAmount / winningTotal)
-            // = 1 + 0.5 + (5 * 1 / 1) = 6.5 ETH
-            expect(reward).to.be.closeTo(ethers.parseEther("6.5"), ethers.parseEther("0.01"));
+            // Reward = betAmount + (losingTotal * betAmount / winningTotal)
+            // = 1 + (5 * 1 / 1) = 6 ETH
+            expect(reward).to.equal(ethers.parseEther("6.0"));
         });
 
         it("应该允许获胜者领取奖励", async function () {
@@ -349,20 +323,21 @@ describe("VotingGame", function () {
             expect(reward).to.equal(0);
         });
 
-        it("未揭示的玩家应该失去deposit", async function () {
+        it("未揭示的玩家应该失去押金", async function () {
             const choice = 0;
             const betAmount = ethers.parseEther("1.0");
             const secret = ethers.hexlify(ethers.randomBytes(32));
 
+            // 新的commitHash：4个参数
             const commitHash = ethers.keccak256(
                 ethers.solidityPacked(
-                    ["uint256", "uint256", "uint256", "bytes32", "address"],
-                    [voteId, choice, betAmount, secret, player1.address]
+                    ["uint256", "uint256", "bytes32", "address"],
+                    [voteId, choice, secret, player1.address]
                 )
             );
 
-            const deposit = ethers.parseEther("0.5");
-            await votingGame.connect(player1).commit(voteId, commitHash, { value: deposit });
+            // 100%支付
+            await votingGame.connect(player1).commit(voteId, commitHash, { value: betAmount });
 
             // Don't reveal, just finalize
             await time.increase(COMMIT_DURATION + REVEAL_DURATION + 1);
@@ -372,9 +347,10 @@ describe("VotingGame", function () {
             const reward = await votingGame.calculateReward(voteId, player1.address);
             expect(reward).to.equal(0);
 
+            // 新的事件名：BetConfiscated
             await expect(
                 votingGame.connect(player1).claimReward(voteId)
-            ).to.emit(votingGame, "DepositConfiscated");
+            ).to.emit(votingGame, "BetConfiscated");
         });
     });
 
@@ -401,20 +377,21 @@ describe("VotingGame", function () {
         });
     });
 
-    // Helper function
+    // Helper function - 完全重写以支持100%押金模式
     async function commitAndReveal(player, choice, betAmount) {
         const secret = ethers.hexlify(ethers.randomBytes(32));
         const voteId = 1;
 
+        // 新的commitHash：4个参数（移除betAmount）
         const commitHash = ethers.keccak256(
             ethers.solidityPacked(
-                ["uint256", "uint256", "uint256", "bytes32", "address"],
-                [voteId, choice, betAmount, secret, player.address]
+                ["uint256", "uint256", "bytes32", "address"],
+                [voteId, choice, secret, player.address]
             )
         );
 
-        const deposit = betAmount * BigInt(50) / BigInt(100); // 50%
-        await votingGame.connect(player).commit(voteId, commitHash, { value: deposit });
+        // 100%押金模式：直接支付全额
+        await votingGame.connect(player).commit(voteId, commitHash, { value: betAmount });
 
         // Only advance time and start reveal once
         const voteInfo = await votingGame.getVoteInfo(voteId);
@@ -423,6 +400,7 @@ describe("VotingGame", function () {
             await votingGame.startRevealPhase(voteId);
         }
 
-        await votingGame.connect(player).reveal(voteId, choice, betAmount, secret);
+        // 新的reveal：3个参数（移除betAmount）
+        await votingGame.connect(player).reveal(voteId, choice, secret);
     }
 });
