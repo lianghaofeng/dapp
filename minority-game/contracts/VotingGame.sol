@@ -1,7 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+/**
+ * @dev Contract module that helps prevent reentrant calls to a function.
+ */
+abstract contract ReentrancyGuard {
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+    uint256 private _status;
+
+    constructor() {
+        _status = _NOT_ENTERED;
+    }
+
+    modifier nonReentrant() {
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+        _status = _ENTERED;
+        _;
+        _status = _NOT_ENTERED;
+    }
+}
 
 contract VotingGame is ReentrancyGuard {
     enum VoteStage { Active, Committing, Revealing, Finalized, Claiming }
@@ -14,7 +32,7 @@ contract VotingGame is ReentrancyGuard {
         VoteStage stage;
         uint256 commitEndTime;
         uint256 revealEndTime;
-        mapping(uint256 => uint256) optionTotals; // optionIndex => total bet amount
+        mapping(uint256 => uint256) optionTotals;
         uint256 totalBets;
         bool finalized;
         uint256 winningOption;
@@ -52,7 +70,6 @@ contract VotingGame is ReentrancyGuard {
     event RewardClaimed(uint256 indexed voteId, address indexed player, uint256 reward);
     event BetConfiscated(uint256 indexed voteId, address indexed player, uint256 amount);
 
-    // 创建新投票
     function createVote(
         string memory question,
         string[] memory options
@@ -84,7 +101,6 @@ contract VotingGame is ReentrancyGuard {
         return voteId;
     }
 
-    // 提交commit（全额支付）
     function commit(uint256 voteId, bytes32 commitHash) external payable nonReentrant {
         Vote storage vote = votes[voteId];
         require(vote.voteId != 0, "Vote does not exist");
@@ -97,7 +113,7 @@ contract VotingGame is ReentrancyGuard {
             commitHash: commitHash,
             revealed: false,
             choice: 0,
-            betAmount: msg.value  // 直接使用msg.value作为投注金额
+            betAmount: msg.value
         });
 
         participants[voteId].push(msg.sender);
@@ -106,7 +122,6 @@ contract VotingGame is ReentrancyGuard {
         emit CommitSubmitted(voteId, msg.sender, msg.value);
     }
 
-    // 开始揭示阶段
     function startRevealPhase(uint256 voteId) external {
         Vote storage vote = votes[voteId];
         require(vote.voteId != 0, "Vote does not exist");
@@ -115,7 +130,6 @@ contract VotingGame is ReentrancyGuard {
         vote.stage = VoteStage.Revealing;
     }
 
-    // 揭示投票
     function reveal(
         uint256 voteId,
         uint256 choice,
@@ -131,7 +145,6 @@ contract VotingGame is ReentrancyGuard {
         require(playerCommit.commitHash != bytes32(0), "No commit found");
         require(!playerCommit.revealed, "Already revealed");
 
-        // 验证哈希（不再需要betAmount参数，因为已经在commit时支付）
         bytes32 computedHash = keccak256(
             abi.encodePacked(voteId, choice, secret, msg.sender)
         );
@@ -145,7 +158,6 @@ contract VotingGame is ReentrancyGuard {
         emit RevealSubmitted(voteId, msg.sender, choice, playerCommit.betAmount);
     }
 
-    // 结算投票
     function finalizeVote(uint256 voteId) external {
         Vote storage vote = votes[voteId];
         require(vote.voteId != 0, "Vote does not exist");
@@ -156,7 +168,6 @@ contract VotingGame is ReentrancyGuard {
         vote.finalized = true;
         vote.stage = VoteStage.Finalized;
 
-        // 找到投注最少的选项（少数派获胜）
         uint256 minVotes = type(uint256).max;
         uint256 winningOptionIndex = 0;
         uint256 optionsWithMinVotes = 0;
@@ -172,9 +183,8 @@ contract VotingGame is ReentrancyGuard {
             }
         }
 
-        // 如果平局，没有获胜者
         if (optionsWithMinVotes > 1) {
-            vote.winningOption = type(uint256).max; // 特殊值表示平局
+            vote.winningOption = type(uint256).max;
         } else {
             vote.winningOption = winningOptionIndex;
         }
@@ -184,7 +194,6 @@ contract VotingGame is ReentrancyGuard {
         emit VoteFinalized(voteId, vote.winningOption, minVotes);
     }
 
-    // 计算玩家奖励
     function calculateReward(uint256 voteId, address player) public view returns (uint256) {
         Vote storage vote = votes[voteId];
         Commit storage playerCommit = commits[voteId][player];
@@ -193,17 +202,14 @@ contract VotingGame is ReentrancyGuard {
             return 0;
         }
 
-        // 如果平局，返回投注金额
         if (vote.winningOption == type(uint256).max) {
             return playerCommit.betAmount;
         }
 
-        // 如果不是获胜者，返回0
         if (playerCommit.choice != vote.winningOption) {
             return 0;
         }
 
-        // 计算获胜者和失败者的总投注
         uint256 winningTotal = vote.optionTotals[vote.winningOption];
         uint256 losingTotal = 0;
 
@@ -213,12 +219,10 @@ contract VotingGame is ReentrancyGuard {
             }
         }
 
-        // 计算按比例分配的失败者投注
         uint256 share = (losingTotal * playerCommit.betAmount) / winningTotal;
         return playerCommit.betAmount + share;
     }
 
-    // 领取奖励
     function claimReward(uint256 voteId) external nonReentrant {
         Vote storage vote = votes[voteId];
         require(vote.voteId != 0, "Vote does not exist");
@@ -230,7 +234,6 @@ contract VotingGame is ReentrancyGuard {
         uint256 reward = 0;
 
         if (!playerCommit.revealed) {
-            // 未揭示，投注被没收
             emit BetConfiscated(voteId, msg.sender, playerCommit.betAmount);
         } else {
             reward = calculateReward(voteId, msg.sender);
@@ -245,7 +248,6 @@ contract VotingGame is ReentrancyGuard {
         }
     }
 
-    // 查询函数
     function getVoteInfo(uint256 voteId) external view returns (
         uint256 id,
         address creator,
