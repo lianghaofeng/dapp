@@ -2,8 +2,7 @@
   "name": "minority-wins-game",
   "version": "1.0.0",
   "main": "minority-wins-game.js",
-  "type": "module",
-  
+
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",

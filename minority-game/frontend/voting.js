@@ -4,18 +4,18 @@ const CONTRACT_ABI = [
     "function createVote(string memory question, string[] memory options) external returns (uint256)",
     "function commit(uint256 voteId, bytes32 commitHash) external payable",
     "function startRevealPhase(uint256 voteId) external",
-    "function reveal(uint256 voteId, uint256 choice, uint256 betAmount, bytes32 secret) external",
+    "function reveal(uint256 voteId, uint256 choice, bytes32 secret) external",
     "function finalizeVote(uint256 voteId) external",
     "function claimReward(uint256 voteId) external",
     "function calculateReward(uint256 voteId, address player) external view returns (uint256)",
-    "function getVoteInfo(uint256 voteId) external view returns (uint256 id, address creator, string memory question, string[] memory options, uint8 stage, uint256 commitEndTime, uint256 revealEndTime, uint256 totalDeposits, bool finalized, uint256 winningOption, uint256 createdAt)",
+    "function getVoteInfo(uint256 voteId) external view returns (uint256 id, address creator, string memory question, string[] memory options, uint8 stage, uint256 commitEndTime, uint256 revealEndTime, uint256 totalBets, bool finalized, uint256 winningOption, uint256 createdAt)",
     "function getOptionTotal(uint256 voteId, uint256 optionIndex) external view returns (uint256)",
-    "function getCommit(uint256 voteId, address player) external view returns (bytes32 commitHash, uint256 depositAmount, bool revealed, uint256 choice, uint256 betAmount)",
+    "function getCommit(uint256 voteId, address player) external view returns (bytes32 commitHash, bool revealed, uint256 choice, uint256 betAmount)",
     "function getParticipants(uint256 voteId) external view returns (address[] memory)",
     "function getAllActiveVotes() external view returns (uint256[] memory)",
     "function voteCounter() external view returns (uint256)",
     "event VoteCreated(uint256 indexed voteId, address indexed creator, string question, uint256 optionsCount, uint256 commitEndTime)",
-    "event CommitSubmitted(uint256 indexed voteId, address indexed player, uint256 depositAmount)",
+    "event CommitSubmitted(uint256 indexed voteId, address indexed player, uint256 betAmount)",
     "event RevealSubmitted(uint256 indexed voteId, address indexed player, uint256 choice, uint256 amount)",
     "event VoteFinalized(uint256 indexed voteId, uint256 winningOption, uint256 winningTotal)",
     "event RewardClaimed(uint256 indexed voteId, address indexed player, uint256 reward)"
@@ -26,7 +26,7 @@ let provider;
 let signer;
 let contract;
 let userAddress;
-let userCommits = {}; // 存储用户的commit信息 {voteId: {choice, betAmount, secret}}
+let userCommits = {}; // 存储用户的commit信息 {voteId: {choice, secret}}
 
 // Stage 枚举
 const VoteStage = {
@@ -45,27 +45,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // 设置事件监听
 function setupEventListeners() {
-    // 钱包连接
     document.getElementById('connectWallet').addEventListener('click', connectWallet);
     document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
 
-    // Tab切换
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
 
-    // 创建投票
     document.getElementById('addOption').addEventListener('click', addOptionInput);
     document.getElementById('createVote').addEventListener('click', createVote);
 
-    // 刷新按钮
     document.getElementById('refreshVotes').addEventListener('click', loadActiveVotes);
     document.getElementById('refreshMyVotes').addEventListener('click', loadMyVotes);
 }
 
 // 切换Tab
 function switchTab(tabName) {
-    // 更新tab按钮状态
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
         if (tab.dataset.tab === tabName) {
@@ -73,13 +68,11 @@ function switchTab(tabName) {
         }
     });
 
-    // 更新内容显示
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
     });
     document.getElementById(`${tabName}-tab`).classList.add('active');
 
-    // 根据tab加载相应内容
     if (tabName === 'vote') {
         loadActiveVotes();
     } else if (tabName === 'my-votes') {
@@ -91,30 +84,25 @@ function switchTab(tabName) {
 async function connectWallet() {
     try {
         if (typeof window.ethereum === 'undefined') {
-            showStatus('walletStatus', 'error', '请安装 MetaMask!');
+            showStatus('walletStatus', 'error', '请安装 MetaMask!', true);
             return;
         }
 
         showStatus('walletStatus', 'info', '连接中...', true);
 
-        // 请求账户访问
         await window.ethereum.request({ method: 'eth_requestAccounts' });
 
-        // 创建provider和signer
         provider = new ethers.BrowserProvider(window.ethereum);
         signer = await provider.getSigner();
         userAddress = await signer.getAddress();
 
-        // 创建合约实例
         contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
         showStatus('walletStatus', 'success', `✅ 已连接: ${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`, true);
 
-        // 监听账户变化
         window.ethereum.on('accountsChanged', handleAccountsChanged);
         window.ethereum.on('chainChanged', () => window.location.reload());
 
-        // 加载活跃投票
         loadActiveVotes();
 
     } catch (error) {
@@ -189,7 +177,6 @@ async function createVote() {
         .map(input => input.value.trim())
         .filter(opt => opt.length > 0);
 
-    // 验证
     if (!question) {
         showStatus('createStatus', 'error', '请输入投票问题!', false);
         return;
@@ -213,18 +200,11 @@ async function createVote() {
 
         const receipt = await tx.wait();
 
-        // 从事件中获取voteId
-        const voteCreatedEvent = receipt.logs.find(
-            log => log.topics[0] === ethers.id("VoteCreated(uint256,address,string,uint256,uint256)")
-        );
-
         showStatus('createStatus', 'success', `✅ 投票创建成功! 交易哈希: ${receipt.hash.slice(0, 10)}...`, false);
 
-        // 清空表单
         document.getElementById('voteQuestion').value = '';
         document.querySelectorAll('.option-input').forEach(input => input.value = '');
 
-        // 切换到投票列表
         setTimeout(() => {
             switchTab('vote');
         }, 2000);
@@ -261,7 +241,6 @@ async function loadActiveVotes() {
                 const voteInfo = await contract.getVoteInfo(i);
                 const stage = Number(voteInfo[4]);
 
-                // 只显示活跃的投票（提交和揭示阶段）
                 if (stage === 1 || stage === 2) {
                     votes.push({
                         id: Number(voteInfo[0]),
@@ -271,7 +250,7 @@ async function loadActiveVotes() {
                         stage: stage,
                         commitEndTime: Number(voteInfo[5]),
                         revealEndTime: Number(voteInfo[6]),
-                        totalDeposits: voteInfo[7],
+                        totalBets: voteInfo[7],
                         finalized: voteInfo[8],
                         winningOption: Number(voteInfo[9]),
                         createdAt: Number(voteInfo[10])
@@ -289,7 +268,6 @@ async function loadActiveVotes() {
 
         container.innerHTML = votes.map(vote => createVoteCard(vote)).join('');
 
-        // 绑定投票按钮事件
         votes.forEach(vote => {
             document.getElementById(`vote-btn-${vote.id}`)?.addEventListener('click', () => {
                 showVoteModal(vote);
@@ -374,6 +352,9 @@ async function showVoteModal(vote) {
             <div style="margin-bottom: 20px;">
                 <label>投注金额 (BNB):</label>
                 <input type="number" id="betAmount" value="0.01" step="0.01" min="0.01">
+                <p style="color: #666; font-size: 0.9em; margin-top: 5px;">
+                    💡 提示：提交时将直接支付全额投注金额
+                </p>
             </div>
             <div style="display: flex; gap: 10px;">
                 <button id="submitCommit">提交</button>
@@ -394,7 +375,6 @@ async function showVoteModal(vote) {
                 <h2 style="color: #667eea; margin-bottom: 20px;">${escapeHtml(vote.question)}</h2>
                 <div style="margin-bottom: 20px;">
                     <p>你的选择: <strong>${escapeHtml(vote.options[userCommit.choice])}</strong></p>
-                    <p>投注金额: <strong>${ethers.formatEther(userCommit.betAmount)} BNB</strong></p>
                 </div>
                 <div style="display: flex; gap: 10px;">
                     <button id="submitReveal">提交揭示</button>
@@ -435,7 +415,7 @@ async function showVoteModal(vote) {
     });
 }
 
-// 提交commit
+// 提交commit（全额支付）
 async function submitCommit(voteId, choice) {
     try {
         const betAmountInput = document.getElementById('betAmount').value;
@@ -444,31 +424,25 @@ async function submitCommit(voteId, choice) {
         // 生成随机secret
         const secret = ethers.hexlify(ethers.randomBytes(32));
 
-        // 计算deposit (30%-70% of bet amount)
-        const minDeposit = betAmount * BigInt(30) / BigInt(100);
-        const maxDeposit = betAmount * BigInt(70) / BigInt(100);
-        const randomPercent = Math.floor(Math.random() * 41) + 30; // 30-70
-        const deposit = betAmount * BigInt(randomPercent) / BigInt(100);
-
-        // 计算commitHash
+        // 计算commitHash（不再包含betAmount）
         const commitHash = ethers.keccak256(
             ethers.solidityPacked(
-                ['uint256', 'uint256', 'uint256', 'bytes32', 'address'],
-                [voteId, choice, betAmount, secret, userAddress]
+                ['uint256', 'uint256', 'bytes32', 'address'],
+                [voteId, choice, secret, userAddress]
             )
         );
 
         showStatus('modalStatus', 'info', '提交中...', false);
 
-        const tx = await contract.commit(voteId, commitHash, { value: deposit });
+        // 直接发送全额betAmount作为value
+        const tx = await contract.commit(voteId, commitHash, { value: betAmount });
         showStatus('modalStatus', 'info', '交易已提交，等待确认...', false);
 
         await tx.wait();
 
-        // 保存commit信息到本地存储
+        // 保存commit信息到本地存储（不再需要betAmount）
         userCommits[voteId] = {
             choice: choice,
-            betAmount: betAmount.toString(),
             secret: secret
         };
         localStorage.setItem('userCommits', JSON.stringify(userCommits));
@@ -486,7 +460,7 @@ async function submitCommit(voteId, choice) {
     }
 }
 
-// 提交reveal
+// 提交reveal（不再需要betAmount参数）
 async function submitReveal(voteId) {
     try {
         const commit = userCommits[voteId];
@@ -500,7 +474,6 @@ async function submitReveal(voteId) {
         const tx = await contract.reveal(
             voteId,
             commit.choice,
-            commit.betAmount,
             commit.secret
         );
         showStatus('modalStatus', 'info', '交易已提交，等待确认...', false);
@@ -532,7 +505,6 @@ async function loadMyVotes() {
     try {
         container.innerHTML = '<div class="status info">加载中...</div>';
 
-        // 从localStorage恢复commits
         const storedCommits = localStorage.getItem('userCommits');
         if (storedCommits) {
             userCommits = JSON.parse(storedCommits);
@@ -568,7 +540,6 @@ async function loadMyVotes() {
 
         container.innerHTML = myVotes.map(vote => createMyVoteCard(vote)).join('');
 
-        // 绑定领取奖励按钮
         myVotes.forEach(vote => {
             const claimBtn = document.getElementById(`claim-btn-${vote.id}`);
             if (claimBtn) {
