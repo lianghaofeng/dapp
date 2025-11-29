@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hardhat 连接测试 - ethers v6</title>
+    <!-- 使用 ethers v6 CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.9.0/ethers.umd.min.js"></script>
+</head>
+<body>
+    <h1>Hardhat 本地网络连接测试 (ethers v6)</h1>
+    
+    <div>
+        <button onclick="testConnection()">测试 RPC 连接</button>
+        <button onclick="connectMetaMask()">连接 MetaMask</button>
+        <button onclick="getAccounts()">获取账户</button>
+    </div>
+    
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+
+    <script>
+        // ethers v6 不再需要 providers 命名空间
+        // 直接使用 ethers.JsonRpcProvider
+        
+        async function testConnection() {
+            try {
+                // 创建 provider
+                const provider = new ethers.JsonRpcProvider('http://localhost:8545');
+                
+                // 获取网络信息
+                const network = await provider.getNetwork();
+                const blockNumber = await provider.getBlockNumber();
+                
+                document.getElementById('result').innerHTML = `
+                    <h3 style="color: green;">✅ RPC 连接成功！</h3>
+                    <p><strong>网络名称:</strong> ${network.name}</p>
+                    <p><strong>链 ID:</strong> ${network.chainId}</p>
+                    <p><strong>当前区块:</strong> ${blockNumber}</p>
+                    <p><strong>RPC URL:</strong> http://localhost:8545</p>
+                `;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <h3 style="color: red;">❌ RPC 连接失败</h3>
+                    <p><strong>错误:</strong> ${error.message}</p>
+                    <p>请确保运行了: <code>npx hardhat node</code></p>
+                `;
+            }
+        }
+
+        async function connectMetaMask() {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    // 请求账户访问
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    
+                    // 创建 Web3Provider
+                    const provider = new ethers.BrowserProvider(window.ethereum);
+                    const signer = await provider.getSigner();
+                    const address = await signer.getAddress();
+                    const balance = await provider.getBalance(address);
+                    
+                    // 格式化余额 (从 wei 转换为 ETH)
+                    const balanceInEth = ethers.formatEther(balance);
+                    
+                    document.getElementById('result').innerHTML = `
+                        <h3 style="color: green;">✅ MetaMask 连接成功</h3>
+                        <p><strong>账户地址:</strong> ${address}</p>
+                        <p><strong>余额:</strong> ${balanceInEth} ETH</p>
+                        <p><strong>网络 ID:</strong> ${window.ethereum.chainId}</p>
+                    `;
+                } catch (error) {
+                    document.getElementById('result').innerHTML = `
+                        <h3 style="color: red;">❌ MetaMask 连接失败</h3>
+                        <p><strong>错误:</strong> ${error.message}</p>
+                        <p><strong>错误代码:</strong> ${error.code}</p>
+                    `;
+                }
+            } else {
+                document.getElementById('result').innerHTML = `
+                    <h3 style="color: orange;">⚠️ 未检测到 MetaMask</h3>
+                    <p>请安装 MetaMask 浏览器扩展</p>
+                    <p><a href="https://metamask.io/download.html" target="_blank">下载 MetaMask</a></p>
+                `;
+            }
+        }
+
+        async function getAccounts() {
+            try {
+                const provider = new ethers.JsonRpcProvider('http://localhost:8545');
+                
+                // 获取账户列表（Hardhat 节点会提供测试账户）
+                const accounts = await provider.listAccounts();
+                
+                let accountsHtml = '<h3>本地节点账户列表</h3>';
+                for (let i = 0; i < Math.min(accounts.length, 5); i++) {
+                    const balance = await provider.getBalance(accounts[i].address);
+                    const balanceEth = ethers.formatEther(balance);
+                    
+                    accountsHtml += `
+                        <div style="margin: 10px 0; padding: 10px; background: #f5f5f5;">
+                            <p><strong>账户 ${i}:</strong> ${accounts[i].address}</p>
+                            <p><strong>余额:</strong> ${balanceEth} ETH</p>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('result').innerHTML = accountsHtml;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <h3 style="color: red;">获取账户失败</h3>
+                    <p><strong>错误:</strong> ${error.message}</p>
+                `;
+            }
+        }
+        
+        // 页面加载时检查环境
+        window.onload = function() {
+            if (typeof ethers === 'undefined') {
+                document.getElementById('result').innerHTML = `
+                    <h3 style="color: red;">❌ ethers v6 库未正确加载</h3>
+                    <p>请检查网络连接</p>
+                `;
+            } else {
+                document.getElementById('result').innerHTML = `
+                    <p>ethers v6 已加载，版本: ${ethers.version}</p>
+                    <p>请点击上面的按钮测试连接</p>
+                `;
+            }
+        };
+    </script>
+</body>
+</html>
