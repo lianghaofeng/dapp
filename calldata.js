@@ -2,11 +2,17 @@ import { ethers } from "ethers";
 // 利用Infura的rpc节点连接以太坊网络
 // 准备Infura API Key, 教程：https://github.com/AmazingAng/WTFSolidity/blob/main/Topics/Tools/TOOL02_Infura/readme.md
 const INFURA_ID = '6dbcaabcb9954b1db39639f962315c9f'
+
 // 连接以太坊主网
 const provider = new ethers.JsonRpcProvider(`https://mainnet.infura.io/v3/${INFURA_ID}`)
 
 const privateKey = '0xf2d2070d1e06c000286e9545519578d654a6a29a1cad96f3be8f6ff104afd935'
 const wallet = new ethers.Wallet(privateKey, provider);
+
+// project entry cook mango pause vast purse network regular mushroom divide chuckle river focus tobacco laundry galaxy tornado own online satisfy just wrap arctic
+const mnemonic = ethers.Mnemonic.entropyToPhrase("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
+console.log(`nmnemonic: ${mnemonic}`)
+
 
 
 // WETH的ABI
