@@ -26,7 +26,7 @@ describe("VotingGame", function () {
             const question = "你最喜欢的颜色是什么？";
             const options = ["红色", "蓝色", "绿色"];
 
-            const tx = await votingGame.createVote(question, options);
+            const tx = await votingGame.createVote(question, options, 0, 0);
             const receipt = await tx.wait();
 
             // 验证事件
@@ -53,7 +53,7 @@ describe("VotingGame", function () {
             const options = ["唯一选项"];
 
             await expect(
-                votingGame.createVote(question, options)
+                votingGame.createVote(question, options, 0, 0)
             ).to.be.revertedWith("At least 2 options required");
         });
 
@@ -62,7 +62,7 @@ describe("VotingGame", function () {
             const options = Array(11).fill("选项");
 
             await expect(
-                votingGame.createVote(question, options)
+                votingGame.createVote(question, options, 0, 0)
             ).to.be.revertedWith("Too many options");
         });
 
@@ -71,7 +71,7 @@ describe("VotingGame", function () {
             const options = ["选项1", "选项2"];
 
             await expect(
-                votingGame.createVote(question, options)
+                votingGame.createVote(question, options, 0, 0)
             ).to.be.revertedWith("Question cannot be empty");
         });
 
@@ -80,7 +80,7 @@ describe("VotingGame", function () {
             const options = ["选项1", ""];
 
             await expect(
-                votingGame.createVote(question, options)
+                votingGame.createVote(question, options, 0, 0)
             ).to.be.revertedWith("Option cannot be empty");
         });
     });
@@ -91,7 +91,7 @@ describe("VotingGame", function () {
         const options = ["选项A", "选项B", "选项C"];
 
         beforeEach(async function () {
-            const tx = await votingGame.createVote(question, options);
+            const tx = await votingGame.createVote(question, options, 0, 0);
             await tx.wait();
             voteId = 1;
         });
@@ -161,7 +161,7 @@ describe("VotingGame", function () {
         const options = ["选项A", "选项B"];
 
         beforeEach(async function () {
-            const tx = await votingGame.createVote(question, options);
+            const tx = await votingGame.createVote(question, options, 0, 0);
             await tx.wait();
             voteId = 1;
         });
@@ -243,7 +243,7 @@ describe("VotingGame", function () {
         const options = ["选项A", "选项B", "选项C"];
 
         beforeEach(async function () {
-            const tx = await votingGame.createVote(question, options);
+            const tx = await votingGame.createVote(question, options, 0, 0);
             await tx.wait();
             voteId = 1;
         });
@@ -358,15 +358,15 @@ describe("VotingGame", function () {
 
     describe("查询功能", function () {
         it("应该能够获取所有活跃投票", async function () {
-            await votingGame.createVote("问题1", ["选项A", "选项B"]);
-            await votingGame.createVote("问题2", ["选项C", "选项D"]);
+            await votingGame.createVote("问题1", ["选项A", "选项B"], 0, 0);
+            await votingGame.createVote("问题2", ["选项C", "选项D"], 0, 0);
 
             const activeVotes = await votingGame.getAllActiveVotes();
             expect(activeVotes.length).to.equal(2);
         });
 
         it("应该能够获取投票参与者", async function () {
-            await votingGame.createVote("测试", ["A", "B"]);
+            await votingGame.createVote("测试", ["A", "B"], 0, 0);
             const voteId = 1;
 
             // 所有玩家自动commit和reveal

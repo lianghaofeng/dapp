@@ -1,7 +1,7 @@
 // 合约配置
 const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS_HERE"; // 部署后替换
 const CONTRACT_ABI = [
-    "function createVote(string memory question, string[] memory options) external returns (uint256)",
+    "function createVote(string memory question, string[] memory options, uint256 commitDuration, uint256 revealDuration) external returns (uint256)",
     "function commit(uint256 voteId, bytes32 commitHash) external payable",
     "function startRevealPhase(uint256 voteId) external",
     "function reveal(uint256 voteId, uint256 choice, bytes32 secret) external",
@@ -195,7 +195,8 @@ async function createVote() {
     try {
         showStatus('createStatus', 'info', '创建中...', false);
 
-        const tx = await contract.createVote(question, options);
+        // Use 0, 0 for default durations (1 hour commit, 30 min reveal)
+        const tx = await contract.createVote(question, options, 0, 0);
         showStatus('createStatus', 'info', '交易已提交，等待确认...', false);
 
         const receipt = await tx.wait();

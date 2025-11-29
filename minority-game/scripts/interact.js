@@ -27,7 +27,8 @@ async function main() {
     const question = "你最喜欢的编程语言是？";
     const options = ["JavaScript", "Python", "Rust", "Go"];
 
-    const tx = await votingGame.createVote(question, options);
+    // Use 0, 0 for default durations (1 hour commit, 30 min reveal)
+    const tx = await votingGame.createVote(question, options, 0, 0);
     console.log("交易已提交:", tx.hash);
 
     const receipt = await tx.wait();

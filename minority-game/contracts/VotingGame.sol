@@ -67,8 +67,12 @@ contract VotingGame is ReentrancyGuard {
     mapping(uint256 => mapping(address => Commit)) public commits;
     mapping(uint256 => address[]) public participants;
 
-    uint256 public constant COMMIT_DURATION = 1 hours;
-    uint256 public constant REVEAL_DURATION = 30 minutes;
+    uint256 public constant DEFAULT_COMMIT_DURATION = 1 hours;
+    uint256 public constant DEFAULT_REVEAL_DURATION = 30 minutes;
+    uint256 public constant MIN_COMMIT_DURATION = 5 minutes;
+    uint256 public constant MAX_COMMIT_DURATION = 7 days;
+    uint256 public constant MIN_REVEAL_DURATION = 5 minutes;
+    uint256 public constant MAX_REVEAL_DURATION = 1 days;
     uint256 public constant MIN_OPTIONS = 2;
     uint256 public constant MAX_OPTIONS = 10;
 
@@ -87,11 +91,22 @@ contract VotingGame is ReentrancyGuard {
 
     function createVote(
         string memory question,
-        string[] memory options
+        string[] memory options,
+        uint256 commitDuration,
+        uint256 revealDuration
     ) external returns (uint256) {
         require(bytes(question).length > 0, "Question cannot be empty");
         require(options.length >= MIN_OPTIONS, "At least 2 options required");
         require(options.length <= MAX_OPTIONS, "Too many options");
+
+        // Validate custom durations (use defaults if 0)
+        uint256 actualCommitDuration = commitDuration == 0 ? DEFAULT_COMMIT_DURATION : commitDuration;
+        uint256 actualRevealDuration = revealDuration == 0 ? DEFAULT_REVEAL_DURATION : revealDuration;
+
+        require(actualCommitDuration >= MIN_COMMIT_DURATION, "Commit duration too short");
+        require(actualCommitDuration <= MAX_COMMIT_DURATION, "Commit duration too long");
+        require(actualRevealDuration >= MIN_REVEAL_DURATION, "Reveal duration too short");
+        require(actualRevealDuration <= MAX_REVEAL_DURATION, "Reveal duration too long");
 
         for (uint256 i = 0; i < options.length; i++) {
             require(bytes(options[i]).length > 0, "Option cannot be empty");
@@ -105,8 +120,8 @@ contract VotingGame is ReentrancyGuard {
         newVote.creator = msg.sender;
         newVote.question = question;
         newVote.stage = VoteStage.Committing;
-        newVote.commitEndTime = block.timestamp + COMMIT_DURATION;
-        newVote.revealEndTime = block.timestamp + COMMIT_DURATION + REVEAL_DURATION;
+        newVote.commitEndTime = block.timestamp + actualCommitDuration;
+        newVote.revealEndTime = block.timestamp + actualCommitDuration + actualRevealDuration;
         newVote.createdAt = block.timestamp;
 
         voteOptions[voteId] = options;
