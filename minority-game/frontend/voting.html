@@ -1,22 +1,31 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minority Wins - 投票游戏</title>
+    <title>Minority Wins - Voting Game</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            image-rendering: pixelated;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Press Start 2P', cursive;
+            background: #0f0f1e;
+            background-image:
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,.03) 2px, rgba(255,255,255,.03) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,.03) 2px, rgba(255,255,255,.03) 4px);
             min-height: 100vh;
             padding: 20px;
-            color: #333;
+            color: #e0e0e0;
+            font-size: 10px;
+            line-height: 1.8;
         }
 
         .container {
@@ -26,81 +35,114 @@
 
         header {
             text-align: center;
-            color: white;
+            color: #00ff88;
             margin-bottom: 30px;
-            animation: fadeInDown 0.8s ease-out;
+            padding: 20px;
+            background: #1a1a2e;
+            border: 4px solid #2a2a3e;
+            box-shadow:
+                0 0 0 4px #0f0f1e,
+                0 8px 0 0 #000;
         }
 
         header h1 {
-            font-size: 3em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-shadow:
+                2px 2px 0 #000,
+                4px 4px 0 rgba(0,255,136,0.3);
+            letter-spacing: 2px;
         }
 
         header p {
-            font-size: 1.2em;
-            opacity: 0.9;
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
         }
 
         .card {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            animation: fadeInUp 0.8s ease-out;
-            transition: transform 0.3s ease;
+            background: #1a1a2e;
+            border: 4px solid #2a2a3e;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow:
+                0 0 0 4px #0f0f1e,
+                0 8px 0 0 #000;
+            transition: transform 0.1s;
         }
 
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+            transform: translateY(-4px);
+            box-shadow:
+                0 0 0 4px #0f0f1e,
+                0 12px 0 0 #000;
         }
 
         .card h2 {
-            color: #667eea;
+            color: #00ff88;
             margin-bottom: 20px;
-            font-size: 1.8em;
-            border-bottom: 3px solid #667eea;
+            font-size: 14px;
             padding-bottom: 10px;
+            border-bottom: 2px solid #2a2a3e;
+            text-transform: uppercase;
         }
 
         .wallet-section {
             display: flex;
-            gap: 15px;
+            gap: 10px;
             flex-wrap: wrap;
             align-items: center;
         }
 
         button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            font-size: 16px;
-            font-weight: 600;
+            background: #2a4858;
+            color: #00ff88;
+            border: 3px solid #3a5868;
+            padding: 12px 20px;
+            font-size: 10px;
+            font-family: 'Press Start 2P', cursive;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.1s;
+            box-shadow:
+                inset -2px -2px 0 0 #1a3848,
+                inset 2px 2px 0 0 #3a6878,
+                0 4px 0 0 #000;
+            text-transform: uppercase;
+            position: relative;
         }
 
         button:hover {
+            background: #3a5868;
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+            box-shadow:
+                inset -2px -2px 0 0 #2a4858,
+                inset 2px 2px 0 0 #4a7888,
+                0 6px 0 0 #000;
         }
 
         button:active {
-            transform: translateY(0);
+            transform: translateY(2px);
+            box-shadow:
+                inset -2px -2px 0 0 #0a2838,
+                inset 2px 2px 0 0 #2a4858,
+                0 2px 0 0 #000;
         }
 
         button.secondary {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+            background: #58394a;
+            border-color: #68495a;
+            box-shadow:
+                inset -2px -2px 0 0 #48293a,
+                inset 2px 2px 0 0 #78596a,
+                0 4px 0 0 #000;
         }
 
         button.secondary:hover {
-            box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+            background: #68495a;
+            box-shadow:
+                inset -2px -2px 0 0 #58394a,
+                inset 2px 2px 0 0 #88697a,
+                0 6px 0 0 #000;
         }
 
         button:disabled {
@@ -110,27 +152,27 @@
 
         .status {
             padding: 15px;
-            border-radius: 10px;
             margin-top: 15px;
-            animation: slideIn 0.5s ease-out;
+            border: 3px solid;
+            font-size: 9px;
         }
 
         .status.success {
-            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
-            color: #155724;
-            border-left: 4px solid #28a745;
+            background: #1a3a2a;
+            color: #00ff88;
+            border-color: #2a4a3a;
         }
 
         .status.error {
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-            color: #721c24;
-            border-left: 4px solid #dc3545;
+            background: #3a1a2a;
+            color: #ff6b6b;
+            border-color: #4a2a3a;
         }
 
         .status.info {
-            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-            color: #004085;
-            border-left: 4px solid #17a2b8;
+            background: #1a2a3a;
+            color: #6bb6ff;
+            border-color: #2a3a4a;
         }
 
         input[type="text"],
@@ -138,33 +180,39 @@
         textarea,
         select {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
+            padding: 10px;
+            border: 3px solid #2a2a3e;
+            background: #0f0f1e;
+            color: #e0e0e0;
+            font-size: 10px;
+            font-family: 'Press Start 2P', cursive;
             margin-top: 8px;
             margin-bottom: 15px;
-            transition: all 0.3s ease;
+            transition: all 0.2s;
         }
 
         input:focus,
         textarea:focus,
         select:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #00ff88;
+            background: #1a1a2e;
+            box-shadow: inset 0 0 0 2px #00ff8844;
         }
 
         textarea {
             min-height: 80px;
             resize: vertical;
+            line-height: 1.6;
         }
 
         label {
             display: block;
-            font-weight: 600;
-            color: #555;
+            font-weight: normal;
+            color: #888;
             margin-bottom: 5px;
+            font-size: 9px;
+            text-transform: uppercase;
         }
 
         .form-group {
@@ -172,9 +220,9 @@
         }
 
         .options-container {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
+            background: #0f0f1e;
+            padding: 15px;
+            border: 2px solid #2a2a3e;
             margin-bottom: 20px;
         }
 
@@ -191,31 +239,31 @@
         }
 
         .option-input-group button {
-            padding: 8px 15px;
-            font-size: 14px;
+            padding: 8px 12px;
+            font-size: 8px;
         }
 
         .vote-card {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 20px;
+            background: #0f0f1e;
+            padding: 15px;
             margin-bottom: 15px;
-            border: 2px solid #e0e0e0;
-            transition: all 0.3s ease;
+            border: 3px solid #2a2a3e;
+            transition: all 0.2s;
         }
 
         .vote-card:hover {
-            border-color: #667eea;
-            transform: translateX(5px);
+            border-color: #00ff88;
+            transform: translateX(4px);
         }
 
         .vote-card h3 {
-            color: #667eea;
+            color: #00ff88;
             margin-bottom: 15px;
+            font-size: 12px;
         }
 
         .vote-card .vote-meta {
-            font-size: 0.9em;
+            font-size: 8px;
             color: #666;
             margin-bottom: 10px;
         }
@@ -227,52 +275,56 @@
         }
 
         .vote-option {
-            background: white;
-            padding: 12px;
-            border-radius: 10px;
-            border: 2px solid #e0e0e0;
+            background: #1a1a2e;
+            padding: 10px;
+            border: 2px solid #2a2a3e;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.1s;
         }
 
         .vote-option:hover {
-            border-color: #667eea;
-            background: #f0f2ff;
+            border-color: #00ff88;
+            background: #1a2a2e;
         }
 
         .vote-option.selected {
-            border-color: #667eea;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            border-color: #00ff88;
+            background: #2a4858;
+            color: #00ff88;
+            box-shadow: inset 0 0 10px rgba(0,255,136,0.2);
         }
 
         .badge {
             display: inline-block;
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 0.85em;
-            font-weight: 600;
+            padding: 5px 10px;
+            font-size: 8px;
+            font-weight: normal;
             margin-right: 8px;
+            border: 2px solid;
         }
 
         .badge.commit {
-            background: #ffc107;
-            color: #000;
+            background: #3a3a1a;
+            color: #ffeb3b;
+            border-color: #4a4a2a;
         }
 
         .badge.reveal {
-            background: #17a2b8;
-            color: white;
+            background: #1a3a3a;
+            color: #00bcd4;
+            border-color: #2a4a4a;
         }
 
         .badge.finalized {
-            background: #28a745;
-            color: white;
+            background: #1a3a1a;
+            color: #4caf50;
+            border-color: #2a4a2a;
         }
 
         .badge.claiming {
-            background: #6f42c1;
-            color: white;
+            background: #3a1a3a;
+            color: #9c27b0;
+            border-color: #4a2a4a;
         }
 
         .grid {
@@ -282,54 +334,20 @@
         }
 
         .wallet-info {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 15px;
-            border-radius: 10px;
-            color: white;
-            font-weight: 600;
+            background: #2a2a3e;
+            padding: 12px;
+            border: 2px solid #3a3a4e;
+            color: #00ff88;
+            font-size: 9px;
         }
 
         .loading {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+            width: 16px;
+            height: 16px;
+            border: 3px solid #2a2a3e;
+            border-top-color: #00ff88;
+            animation: spin 1s linear infinite;
         }
 
         @keyframes spin {
@@ -338,31 +356,35 @@
 
         .tabs {
             display: flex;
-            gap: 10px;
+            gap: 0;
             margin-bottom: 20px;
-            border-bottom: 2px solid #e0e0e0;
+            border-bottom: 3px solid #2a2a3e;
         }
 
         .tab {
-            padding: 12px 24px;
-            background: transparent;
+            padding: 12px 20px;
+            background: #1a1a2e;
             color: #666;
             border: none;
             border-bottom: 3px solid transparent;
             cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 9px;
+            transition: all 0.1s;
             box-shadow: none;
+            text-transform: uppercase;
         }
 
         .tab:hover {
-            color: #667eea;
+            color: #00ff88;
+            background: #1a2a2e;
             transform: none;
         }
 
         .tab.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
+            color: #00ff88;
+            background: #0f0f1e;
+            border-bottom-color: #00ff88;
         }
 
         .tab-content {
@@ -371,29 +393,32 @@
 
         .tab-content.active {
             display: block;
-            animation: fadeInUp 0.5s ease-out;
         }
 
         .empty-state {
             text-align: center;
-            padding: 60px 20px;
-            color: #999;
+            padding: 40px 20px;
+            color: #444;
+            font-size: 10px;
         }
 
-        .empty-state svg {
-            width: 100px;
-            height: 100px;
-            margin-bottom: 20px;
-            opacity: 0.5;
+        .pixel-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+            display: block;
         }
 
         @media (max-width: 768px) {
+            body {
+                font-size: 8px;
+            }
+
             header h1 {
-                font-size: 2em;
+                font-size: 18px;
             }
 
             .card {
-                padding: 20px;
+                padding: 15px;
             }
 
             .wallet-section {
@@ -403,77 +428,101 @@
             button {
                 width: 100%;
             }
+
+            .tab {
+                font-size: 8px;
+                padding: 10px 12px;
+            }
+        }
+
+        /* Scanline effect */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 9999;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🎯 Minority Wins</h1>
-            <p>少数派获胜的链上投票游戏</p>
+            <h1>[MINORITY WINS]</h1>
+            <p>The Minority Prevails</p>
         </header>
 
-        <!-- 钱包连接 -->
+        <!-- Wallet Connection -->
         <div class="card">
-            <h2>💼 钱包连接</h2>
+            <h2>[WALLET]</h2>
             <div class="wallet-section">
-                <button id="connectWallet">连接 MetaMask</button>
-                <button id="disconnectWallet" class="secondary">断开连接</button>
+                <button id="connectWallet">CONNECT METAMASK</button>
+                <button id="disconnectWallet" class="secondary">DISCONNECT</button>
             </div>
             <div id="walletStatus" class="status info" style="display: none;">
-                未连接钱包
+                Wallet not connected
             </div>
         </div>
 
-        <!-- Tab 导航 -->
+        <!-- Tab Navigation -->
         <div class="card">
             <div class="tabs">
-                <button class="tab active" data-tab="create">创建投票</button>
-                <button class="tab" data-tab="vote">参与投票</button>
-                <button class="tab" data-tab="my-votes">我的投票</button>
+                <button class="tab active" data-tab="create">CREATE</button>
+                <button class="tab" data-tab="vote">VOTE</button>
+                <button class="tab" data-tab="my-votes">MY VOTES</button>
             </div>
 
-            <!-- 创建投票 Tab -->
+            <!-- Create Vote Tab -->
             <div class="tab-content active" id="create-tab">
-                <h2>📝 创建新投票</h2>
+                <h2>[NEW VOTE]</h2>
                 <div class="form-group">
-                    <label for="voteQuestion">投票问题</label>
-                    <textarea id="voteQuestion" placeholder="输入你的投票问题..."></textarea>
+                    <label for="voteQuestion">QUESTION</label>
+                    <textarea id="voteQuestion" placeholder="Enter your question..."></textarea>
                 </div>
 
                 <div class="options-container">
-                    <label>投票选项 (最少2个，最多10个)</label>
+                    <label>OPTIONS (MIN 2, MAX 10)</label>
                     <div id="optionsInputs">
                         <div class="option-input-group">
-                            <input type="text" placeholder="选项 1" class="option-input">
+                            <input type="text" placeholder="Option 1" class="option-input">
                         </div>
                         <div class="option-input-group">
-                            <input type="text" placeholder="选项 2" class="option-input">
+                            <input type="text" placeholder="Option 2" class="option-input">
                         </div>
                     </div>
-                    <button id="addOption" class="secondary">➕ 添加选项</button>
+                    <button id="addOption" class="secondary">+ ADD OPTION</button>
                 </div>
 
-                <button id="createVote">🚀 创建投票</button>
+                <button id="createVote">CREATE VOTE</button>
                 <div id="createStatus"></div>
             </div>
 
-            <!-- 参与投票 Tab -->
+            <!-- Vote Tab -->
             <div class="tab-content" id="vote-tab">
-                <h2>🗳️ 活跃的投票</h2>
-                <button id="refreshVotes" class="secondary">🔄 刷新</button>
+                <h2>[ACTIVE VOTES]</h2>
+                <button id="refreshVotes" class="secondary">REFRESH</button>
                 <div id="activeVotesList"></div>
             </div>
 
-            <!-- 我的投票 Tab -->
+            <!-- My Votes Tab -->
             <div class="tab-content" id="my-votes-tab">
-                <h2>📊 我的投票记录</h2>
-                <button id="refreshMyVotes" class="secondary">🔄 刷新</button>
+                <h2>[MY HISTORY]</h2>
+                <button id="refreshMyVotes" class="secondary">REFRESH</button>
                 <div id="myVotesList"></div>
             </div>
         </div>
 
-        <!-- 投票详情弹窗 (通过 JavaScript 动态创建) -->
+        <!-- Vote Modal (dynamically created via JavaScript) -->
         <div id="voteModal" style="display: none;"></div>
     </div>
 
