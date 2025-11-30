@@ -1,0 +1,164 @@
+{
+  "timestamp": "2025-11-30T09:22:36.031Z",
+  "config": {
+    "numPlayers": 10,
+    "voteQuestion": "Which is the best crypto?",
+    "voteOptions": [
+      "Bitcoin",
+      "Ethereum",
+      "Solana"
+    ],
+    "commitDuration": 60,
+    "revealDuration": 30,
+    "betAmounts": [
+      "0.1",
+      "0.2",
+      "0.3",
+      "0.15",
+      "0.25",
+      "0.1",
+      "0.2",
+      "0.3",
+      "0.15",
+      "0.25"
+    ]
+  },
+  "players": [
+    {
+      "index": 1,
+      "address": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "choice": 2,
+      "choiceName": "Solana",
+      "betAmount": "0.1"
+    },
+    {
+      "index": 2,
+      "address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      "choice": 0,
+      "choiceName": "Bitcoin",
+      "betAmount": "0.2"
+    },
+    {
+      "index": 3,
+      "address": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+      "choice": 1,
+      "choiceName": "Ethereum",
+      "betAmount": "0.3"
+    },
+    {
+      "index": 4,
+      "address": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+      "choice": 1,
+      "choiceName": "Ethereum",
+      "betAmount": "0.15"
+    },
+    {
+      "index": 5,
+      "address": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+      "choice": 1,
+      "choiceName": "Ethereum",
+      "betAmount": "0.25"
+    },
+    {
+      "index": 6,
+      "address": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+      "choice": 0,
+      "choiceName": "Bitcoin",
+      "betAmount": "0.1"
+    },
+    {
+      "index": 7,
+      "address": "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
+      "choice": 1,
+      "choiceName": "Ethereum",
+      "betAmount": "0.2"
+    },
+    {
+      "index": 8,
+      "address": "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f",
+      "choice": 2,
+      "choiceName": "Solana",
+      "betAmount": "0.3"
+    },
+    {
+      "index": 9,
+      "address": "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720",
+      "choice": 0,
+      "choiceName": "Bitcoin",
+      "betAmount": "0.15"
+    },
+    {
+      "index": 10,
+      "address": "0xBcd4042DE499D14e55001CcbB24a551F3b954096",
+      "choice": 1,
+      "choiceName": "Ethereum",
+      "betAmount": "0.25"
+    }
+  ],
+  "vote": {
+    "id": 1,
+    "question": "Which is the best crypto?",
+    "options": [
+      "Bitcoin",
+      "Ethereum",
+      "Solana"
+    ],
+    "commitEndTime": 1764494616,
+    "revealEndTime": 1764494646
+  },
+  "phases": {
+    "commit": {
+      "duration": 47,
+      "playerCount": 10,
+      "totalBets": 2
+    },
+    "reveal": {
+      "duration": 38,
+      "revealedCount": 8,
+      "nonRevealedCount": 2,
+      "revealRate": "80.00%"
+    },
+    "finalize": {}
+  },
+  "analysis": {
+    "winner": "Bitcoin",
+    "distribution": {
+      "0": 2,
+      "1": 4,
+      "2": 2
+    },
+    "optionTotals": [
+      "0.3",
+      "0.9",
+      "0.4"
+    ],
+    "minorityOption": {
+      "option": "Bitcoin",
+      "count": 2
+    },
+    "winnerCount": 2,
+    "totalRewards": "1.6000",
+    "averageReward": "0.8000",
+    "profitMargin": {
+      "Player 2": "433.33%",
+      "Player 6": "433.33%"
+    }
+  },
+  "contractAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "winners": [
+    {
+      "playerIndex": 2,
+      "address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      "reward": "1.066666666666666666",
+      "choice": "Bitcoin",
+      "betAmount": "0.2"
+    },
+    {
+      "playerIndex": 6,
+      "address": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+      "reward": "0.533333333333333333",
+      "choice": "Bitcoin",
+      "betAmount": "0.1"
+    }
+  ]
+}

@@ -41,7 +41,7 @@ async function main() {
     console.log("-".repeat(60));
 
     const signers = await ethers.getSigners();
-    const deployer = signers[0];
+    const deployer = signers[1];
     const players = signers.slice(1, TEST_CONFIG.numPlayers + 1);
 
     console.log(`✅ Deployer: ${deployer.address}`);
@@ -51,7 +51,7 @@ async function main() {
     console.log("\n📋 STEP 2: Deploy Contract");
     console.log("-".repeat(60));
 
-    const VotingGame = await ethers.getContractFactory("VotingGame");
+    const VotingGame = await ethers.getContractFactory("VotingGame", deployer);
     const votingGame = await VotingGame.deploy();
     await votingGame.waitForDeployment();
 

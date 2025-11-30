@@ -69,9 +69,9 @@ contract VotingGame is ReentrancyGuard {
 
     uint256 public constant DEFAULT_COMMIT_DURATION = 1 hours;
     uint256 public constant DEFAULT_REVEAL_DURATION = 30 minutes;
-    uint256 public constant MIN_COMMIT_DURATION = 5 minutes;
+    uint256 public constant MIN_COMMIT_DURATION = 5 seconds;
     uint256 public constant MAX_COMMIT_DURATION = 7 days;
-    uint256 public constant MIN_REVEAL_DURATION = 5 minutes;
+    uint256 public constant MIN_REVEAL_DURATION = 5 seconds;
     uint256 public constant MAX_REVEAL_DURATION = 1 days;
     uint256 public constant MIN_OPTIONS = 2;
     uint256 public constant MAX_OPTIONS = 10;
