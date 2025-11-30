@@ -21,8 +21,8 @@ let provider;
 let signer;
 let contract;
 let userAddress;
-let userCommits = {}; // {voteId: {choice, secret, betAmount}}
-let autoRevealEnabled = true; // Auto-reveal feature
+let userCommits = {}; // Per-wallet commits: {walletAddress: {voteId: {choice, secret, betAmount}}}
+let autoRevealEnabled = true;
 
 // Stage Labels (English)
 const VoteStage = {
@@ -36,23 +36,33 @@ const VoteStage = {
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
-    loadUserCommits();
     checkWalletConnection();
     startAutoRefreshTimer();
     initAutoReveal();
 });
 
-// Load user commits from localStorage
+// Load user commits from localStorage (per wallet)
 function loadUserCommits() {
-    const stored = localStorage.getItem('userCommits');
-    if (stored) {
-        userCommits = JSON.parse(stored);
+    if (!userAddress) return;
+
+    const allCommits = localStorage.getItem('allUserCommits');
+    if (allCommits) {
+        const parsed = JSON.parse(allCommits);
+        userCommits = parsed[userAddress.toLowerCase()] || {};
+    } else {
+        userCommits = {};
     }
 }
 
-// Save user commits to localStorage
+// Save user commits to localStorage (per wallet)
 function saveUserCommits() {
-    localStorage.setItem('userCommits', JSON.stringify(userCommits));
+    if (!userAddress) return;
+
+    const allCommits = localStorage.getItem('allUserCommits');
+    const parsed = allCommits ? JSON.parse(allCommits) : {};
+
+    parsed[userAddress.toLowerCase()] = userCommits;
+    localStorage.setItem('allUserCommits', JSON.stringify(parsed));
 }
 
 // Setup Event Listeners
@@ -110,6 +120,9 @@ async function connectWallet() {
 
         contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
+        // Load commits for this wallet
+        loadUserCommits();
+
         showStatus('walletStatus', 'success', `✅ Connected: ${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`, true);
 
         window.ethereum.on('accountsChanged', handleAccountsChanged);
@@ -129,6 +142,7 @@ async function disconnectWallet() {
     signer = null;
     contract = null;
     userAddress = null;
+    userCommits = {};
 
     showStatus('walletStatus', 'info', 'Disconnected', true);
 }
@@ -188,7 +202,6 @@ async function createVote() {
         .map(input => input.value.trim())
         .filter(opt => opt.length > 0);
 
-    // Get time durations in seconds
     const commitMinutes = parseInt(document.getElementById('commitDuration').value) || 60;
     const revealMinutes = parseInt(document.getElementById('revealDuration').value) || 30;
     const commitDuration = commitMinutes * 60;
@@ -229,7 +242,6 @@ async function createVote() {
 
         showStatus('createStatus', 'success', `✅ Vote created successfully! TX: ${receipt.hash.slice(0, 10)}...`, false);
 
-        // Clear form
         document.getElementById('voteQuestion').value = '';
         document.querySelectorAll('.option-input').forEach(input => input.value = '');
         document.getElementById('commitDuration').value = '60';
@@ -242,6 +254,18 @@ async function createVote() {
     } catch (error) {
         console.error('Create vote failed:', error);
         showStatus('createStatus', 'error', 'Creation failed: ' + (error.reason || error.message), false);
+    }
+}
+
+// Check if user has committed on-chain
+async function hasUserCommitted(voteId) {
+    try {
+        const commitInfo = await contract.getCommit(voteId, userAddress);
+        // commitHash will be non-zero if user has committed
+        return commitInfo[0] !== "0x0000000000000000000000000000000000000000000000000000000000000000";
+    } catch (error) {
+        console.error('Check commit failed:', error);
+        return false;
     }
 }
 
@@ -271,9 +295,9 @@ async function loadActiveVotes() {
                 const voteInfo = await contract.getVoteInfo(i);
                 const stage = Number(voteInfo[4]);
 
-                // Only show active votes (stage 1 or 2)
-                if (stage === 1 || stage === 2) {
-                    votes.push({
+                // Show stage 1, 2, and 3 (before finalized)
+                if (stage === 1 || stage === 2 || (stage === 3 && !voteInfo[8])) {
+                    const vote = {
                         id: Number(voteInfo[0]),
                         creator: voteInfo[1],
                         question: voteInfo[2],
@@ -285,7 +309,12 @@ async function loadActiveVotes() {
                         finalized: voteInfo[8],
                         winningOption: Number(voteInfo[9]),
                         createdAt: Number(voteInfo[10])
-                    });
+                    };
+
+                    // Check if user has committed on-chain
+                    vote.userHasCommitted = await hasUserCommitted(i);
+
+                    votes.push(vote);
                 }
             } catch (error) {
                 console.error(`Failed to get vote ${i}:`, error);
@@ -297,15 +326,17 @@ async function loadActiveVotes() {
             return;
         }
 
-        // Fetch option totals for each vote
+        // Fetch option totals only for reveal phase
         for (let vote of votes) {
             vote.optionTotals = [];
-            for (let i = 0; i < vote.options.length; i++) {
-                try {
-                    const total = await contract.getOptionTotal(vote.id, i);
-                    vote.optionTotals.push(total);
-                } catch (error) {
-                    vote.optionTotals.push(0n);
+            if (vote.stage >= 2) { // Only show in reveal phase or later
+                for (let i = 0; i < vote.options.length; i++) {
+                    try {
+                        const total = await contract.getOptionTotal(vote.id, i);
+                        vote.optionTotals.push(total);
+                    } catch (error) {
+                        vote.optionTotals.push(0n);
+                    }
                 }
             }
         }
@@ -317,6 +348,8 @@ async function loadActiveVotes() {
             const voteBtn = document.getElementById(`vote-btn-${vote.id}`);
             const revealBtn = document.getElementById(`reveal-btn-${vote.id}`);
             const startRevealBtn = document.getElementById(`start-reveal-btn-${vote.id}`);
+            const finalizeBtn = document.getElementById(`finalize-btn-${vote.id}`);
+            const claimBtn = document.getElementById(`claim-btn-${vote.id}`);
 
             if (voteBtn) {
                 voteBtn.addEventListener('click', () => showVoteModal(vote));
@@ -329,6 +362,14 @@ async function loadActiveVotes() {
             if (startRevealBtn) {
                 startRevealBtn.addEventListener('click', () => triggerRevealPhase(vote.id));
             }
+
+            if (finalizeBtn) {
+                finalizeBtn.addEventListener('click', () => finalizeVote(vote.id));
+            }
+
+            if (claimBtn) {
+                claimBtn.addEventListener('click', () => claimReward(vote.id));
+            }
         });
 
     } catch (error) {
@@ -340,28 +381,32 @@ async function loadActiveVotes() {
 // Create Vote Card
 function createVoteCard(vote) {
     const now = Math.floor(Date.now() / 1000);
-    const stageBadge = vote.stage === 1 ? 'commit' : 'reveal';
-    const timeLeft = vote.stage === 1 ?
-        vote.commitEndTime - now :
-        vote.revealEndTime - now;
+    const stageBadge = vote.stage === 1 ? 'commit' : vote.stage === 2 ? 'reveal' : 'finalized';
+
+    let timeLeft = 0;
+    if (vote.stage === 1) {
+        timeLeft = vote.commitEndTime - now;
+    } else if (vote.stage === 2) {
+        timeLeft = vote.revealEndTime - now;
+    }
 
     const totalPool = ethers.formatEther(vote.totalBets);
 
-    // Check if commit phase ended
     const commitEnded = now >= vote.commitEndTime;
-
-    // Show start reveal button if commit phase ended but still in stage 1
+    const revealEnded = now >= vote.revealEndTime;
     const showStartReveal = vote.stage === 1 && commitEnded;
+    const showFinalize = vote.stage === 2 && revealEnded;
 
-    // Check if user participated
-    const userParticipated = userCommits[vote.id] !== undefined;
+    // Check if user has revealed
+    const userHasRevealed = userCommits[vote.id] && userCommits[vote.id].revealed;
 
     return `
         <div class="vote-card">
             <h3>${escapeHtml(vote.question)}</h3>
             <div class="vote-meta">
                 <span class="badge ${stageBadge}">${VoteStage[vote.stage]}</span>
-                <span class="countdown">Time Left: ${formatTimeLeft(timeLeft)}</span>
+                ${timeLeft > 0 ? `<span class="countdown">Time Left: ${formatTimeLeft(timeLeft)}</span>` :
+                  `<span class="countdown" style="color: #ff6666;">Ended</span>`}
             </div>
             <div class="vote-meta">
                 <span class="vote-meta-item">
@@ -381,6 +426,19 @@ function createVoteCard(vote) {
                     ${vote.options.map((opt, idx) => `
                         <div style="margin-top: 8px;">
                             <span style="color: #00ffff;">${escapeHtml(opt)}:</span>
+                            <span style="color: #ffaa00; margin-left: 10px;">🔒 Hidden</span>
+                        </div>
+                    `).join('')}
+                    <p style="color: #aaffff; font-size: 10px; margin-top: 10px;">
+                        💡 Bet amounts will be revealed during reveal phase
+                    </p>
+                </div>
+            ` : vote.stage >= 2 && vote.optionTotals.length > 0 ? `
+                <div class="vote-stats">
+                    <strong>Revealed Bets by Option:</strong>
+                    ${vote.options.map((opt, idx) => `
+                        <div style="margin-top: 8px;">
+                            <span style="color: #00ffff;">${escapeHtml(opt)}:</span>
                             <span style="color: #ffaa00; margin-left: 10px;">${ethers.formatEther(vote.optionTotals[idx])} ETH</span>
                         </div>
                     `).join('')}
@@ -389,17 +447,32 @@ function createVoteCard(vote) {
 
             <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
                 ${vote.stage === 1 ? `
-                    <button id="vote-btn-${vote.id}" class="secondary">
-                        ${userParticipated ? 'Already Voted' : 'Submit Vote'}
+                    <button id="vote-btn-${vote.id}" class="secondary" ${vote.userHasCommitted ? 'disabled' : ''}>
+                        ${vote.userHasCommitted ? 'Already Voted' : 'Submit Vote'}
                     </button>
                     ${showStartReveal ? `
                         <button id="start-reveal-btn-${vote.id}" class="danger">
                             Start Reveal Phase
                         </button>
                     ` : ''}
-                ` : vote.stage === 2 && userParticipated ? `
-                    <button id="reveal-btn-${vote.id}">
-                        Submit Reveal
+                ` : vote.stage === 2 ? `
+                    ${vote.userHasCommitted && !userHasRevealed ? `
+                        <button id="reveal-btn-${vote.id}">
+                            Submit Reveal
+                        </button>
+                    ` : ''}
+                    ${showFinalize ? `
+                        <button id="finalize-btn-${vote.id}" class="danger">
+                            Finalize Vote
+                        </button>
+                    ` : ''}
+                ` : vote.stage === 3 && !vote.finalized ? `
+                    <button id="finalize-btn-${vote.id}" class="danger">
+                        Finalize Vote
+                    </button>
+                ` : vote.stage === 3 && vote.finalized ? `
+                    <button id="claim-btn-${vote.id}">
+                        Claim Reward
                     </button>
                 ` : ''}
             </div>
@@ -425,10 +498,28 @@ async function triggerRevealPhase(voteId) {
     }
 }
 
+// Finalize Vote
+async function finalizeVote(voteId) {
+    if (!confirm('Finalize this vote and determine the winner?')) {
+        return;
+    }
+
+    try {
+        const tx = await contract.finalizeVote(voteId);
+        alert('Transaction submitted, waiting for confirmation...');
+        await tx.wait();
+        alert('✅ Vote finalized! Winners can now claim rewards.');
+        loadActiveVotes();
+        loadHistoryVotes();
+    } catch (error) {
+        console.error('Finalize vote failed:', error);
+        alert('Failed: ' + (error.reason || error.message));
+    }
+}
+
 // Show Vote Modal (Commit Phase)
 async function showVoteModal(vote) {
-    // Check if user already voted
-    if (userCommits[vote.id]) {
+    if (vote.userHasCommitted) {
         alert('You have already voted in this poll!');
         return;
     }
@@ -447,7 +538,6 @@ async function showVoteModal(vote) {
                 ${vote.options.map((opt, idx) => `
                     <div class="vote-option" data-option="${idx}">
                         <span>${escapeHtml(opt)}</span>
-                        <span class="vote-option-amount">${ethers.formatEther(vote.optionTotals[idx])} ETH</span>
                     </div>
                 `).join('')}
             </div>
@@ -469,7 +559,6 @@ async function showVoteModal(vote) {
     modal.appendChild(content);
     document.body.appendChild(modal);
 
-    // Event listeners
     let selectedOption = null;
     document.querySelectorAll('.vote-option').forEach(opt => {
         opt.addEventListener('click', () => {
@@ -539,10 +628,8 @@ async function submitCommit(voteId, choice) {
         const betAmountInput = document.getElementById('betAmount').value;
         const betAmount = ethers.parseEther(betAmountInput);
 
-        // Generate random secret
         const secret = ethers.hexlify(ethers.randomBytes(32));
 
-        // Calculate commit hash
         const commitHash = ethers.keccak256(
             ethers.solidityPacked(
                 ['uint256', 'uint256', 'bytes32', 'address'],
@@ -552,7 +639,6 @@ async function submitCommit(voteId, choice) {
 
         showStatus('modalStatus', 'info', 'Submitting...', false);
 
-        // Send transaction with bet amount as value
         const tx = await contract.commit(voteId, commitHash, { value: betAmount });
         showStatus('modalStatus', 'info', 'Transaction submitted, waiting for confirmation...', false);
 
@@ -562,7 +648,8 @@ async function submitCommit(voteId, choice) {
         userCommits[voteId] = {
             choice: choice,
             secret: secret,
-            betAmount: betAmountInput
+            betAmount: betAmountInput,
+            revealed: false
         };
         saveUserCommits();
 
@@ -601,7 +688,6 @@ async function submitReveal(voteId) {
 
         showStatus('modalStatus', 'success', '✅ Reveal submitted successfully!', false);
 
-        // Mark as revealed
         userCommits[voteId].revealed = true;
         saveUserCommits();
 
@@ -640,18 +726,17 @@ async function loadHistoryVotes() {
         for (let i = 1; i <= voteCount; i++) {
             try {
                 const voteInfo = await contract.getVoteInfo(i);
-                const stage = Number(voteInfo[4]);
+                const finalized = voteInfo[8];
 
-                // Only show finalized votes (stage 3)
-                if (stage === 3) {
+                if (finalized) {
                     votes.push({
                         id: Number(voteInfo[0]),
                         creator: voteInfo[1],
                         question: voteInfo[2],
                         options: voteInfo[3],
-                        stage: stage,
+                        stage: Number(voteInfo[4]),
                         totalBets: voteInfo[7],
-                        finalized: voteInfo[8],
+                        finalized: finalized,
                         winningOption: Number(voteInfo[9])
                     });
                 }
@@ -667,9 +752,8 @@ async function loadHistoryVotes() {
 
         container.innerHTML = votes.map(vote => createHistoryCard(vote)).join('');
 
-        // Attach claim buttons
         votes.forEach(vote => {
-            const claimBtn = document.getElementById(`claim-btn-${vote.id}`);
+            const claimBtn = document.getElementById(`history-claim-btn-${vote.id}`);
             if (claimBtn) {
                 claimBtn.addEventListener('click', () => claimReward(vote.id));
             }
@@ -711,9 +795,9 @@ function createHistoryCard(vote) {
                 <div class="vote-stats">
                     <strong>Your Choice:</strong> ${escapeHtml(vote.options[userCommits[vote.id].choice])}<br>
                     ${userRevealed ? `
-                        <button id="claim-btn-${vote.id}" style="margin-top: 10px;">Claim Reward</button>
+                        <button id="history-claim-btn-${vote.id}" style="margin-top: 10px;">Claim Reward</button>
                     ` : `
-                        <span style="color: #ff6666;">Did not reveal</span>
+                        <span style="color: #ff6666;">Did not reveal - No reward</span>
                     `}
                 </div>
             ` : ''}
@@ -727,7 +811,7 @@ async function claimReward(voteId) {
         const reward = await contract.calculateReward(voteId, userAddress);
 
         if (reward === 0n) {
-            alert('No reward available to claim');
+            alert('No reward available to claim. You may not have won or already claimed.');
             return;
         }
 
@@ -742,6 +826,7 @@ async function claimReward(voteId) {
         alert('✅ Reward claimed successfully!');
 
         loadHistoryVotes();
+        loadActiveVotes();
 
     } catch (error) {
         console.error('Claim reward failed:', error);
@@ -756,7 +841,7 @@ function startAutoRefreshTimer() {
         if (activeTab && activeTab.dataset.tab === 'active' && contract) {
             loadActiveVotes();
         }
-    }, 30000); // Refresh every 30 seconds
+    }, 30000);
 }
 
 // Auto-reveal mechanism
@@ -765,34 +850,30 @@ function initAutoReveal() {
         if (!contract || !autoRevealEnabled) return;
 
         try {
-            const voteCounter = await contract.voteCounter();
-            const voteCount = Number(voteCounter);
+            for (const voteId in userCommits) {
+                const commit = userCommits[voteId];
+                if (commit.revealed) continue;
 
-            for (let i = 1; i <= voteCount; i++) {
-                const commit = userCommits[i];
-                if (!commit || commit.revealed) continue;
-
-                const voteInfo = await contract.getVoteInfo(i);
+                const voteInfo = await contract.getVoteInfo(parseInt(voteId));
                 const stage = Number(voteInfo[4]);
 
-                // Auto-reveal if in reveal phase and not yet revealed
                 if (stage === 2) {
-                    console.log(`Auto-revealing vote ${i}...`);
+                    console.log(`Auto-revealing vote ${voteId}...`);
                     try {
-                        const tx = await contract.reveal(i, commit.choice, commit.secret);
+                        const tx = await contract.reveal(parseInt(voteId), commit.choice, commit.secret);
                         await tx.wait();
                         commit.revealed = true;
                         saveUserCommits();
-                        console.log(`✅ Auto-revealed vote ${i}`);
+                        console.log(`✅ Auto-revealed vote ${voteId}`);
                     } catch (error) {
-                        console.error(`Auto-reveal failed for vote ${i}:`, error);
+                        console.error(`Auto-reveal failed for vote ${voteId}:`, error);
                     }
                 }
             }
         } catch (error) {
             console.error('Auto-reveal check failed:', error);
         }
-    }, 60000); // Check every minute
+    }, 60000);
 }
 
 // Utility Functions
