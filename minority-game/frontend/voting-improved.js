@@ -1,5 +1,5 @@
 // Contract Configuration
-const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const CONTRACT_ADDRESS = "0x8464135c8F25Da09e49BC8782676a84730C318bC";
 const CONTRACT_ABI = [
     "function createVote(string memory question, string[] memory options, uint256 commitDuration, uint256 revealDuration) external returns (uint256)",
     "function commit(uint256 voteId, bytes32 commitHash) external payable",
@@ -222,15 +222,15 @@ async function createVote() {
         return;
     }
 
-    if (commitMinutes < 5 || commitMinutes > 1440) {
-        showStatus('createStatus', 'error', 'Commit phase must be between 5 and 1440 minutes!', false);
-        return;
-    }
+    // if (commitMinutes < 5 || commitMinutes > 1440) {
+    //     showStatus('createStatus', 'error', 'Commit phase must be between 5 and 1440 minutes!', false);
+    //     return;
+    // }
 
-    if (revealMinutes < 5 || revealMinutes > 720) {
-        showStatus('createStatus', 'error', 'Reveal phase must be between 5 and 720 minutes!', false);
-        return;
-    }
+    // if (revealMinutes < 5 || revealMinutes > 720) {
+    //     showStatus('createStatus', 'error', 'Reveal phase must be between 5 and 720 minutes!', false);
+    //     return;
+    // }
 
     try {
         showStatus('createStatus', 'info', 'Creating vote...', false);
