@@ -159,12 +159,19 @@ async function main() {
     console.log("\n📋 STEP 5: Waiting for Commit Phase to End");
     console.log("-".repeat(60));
 
+    // Get fresh vote info to calculate accurate wait time
+    const voteInfoBeforeReveal = await votingGame.getVoteInfo(voteId);
     const now = Math.floor(Date.now() / 1000);
-    const waitTime = (Number(voteInfo[5]) - now + 2) * 1000;
+    const commitEndTime = Number(voteInfoBeforeReveal[5]);
+    const waitTime = Math.max(0, (commitEndTime - now + 2) * 1000);
 
     if (waitTime > 0) {
         console.log(`⏳ Waiting ${Math.ceil(waitTime / 1000)} seconds...`);
+        console.log(`   Current time: ${now}`);
+        console.log(`   Commit end time: ${commitEndTime}`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
+    } else {
+        console.log(`⏭️  Commit phase already ended`);
     }
 
     console.log(`✅ Commit phase ended`);
@@ -217,14 +224,19 @@ async function main() {
     console.log("\n📋 STEP 8: Finalize Vote");
     console.log("-".repeat(60));
 
-    // Wait for reveal phase to end
-    const voteInfo2 = await votingGame.getVoteInfo(voteId);
+    // Wait for reveal phase to end - get fresh vote info
+    const voteInfoBeforeFinalize = await votingGame.getVoteInfo(voteId);
     const now2 = Math.floor(Date.now() / 1000);
-    const waitTime2 = (Number(voteInfo2[6]) - now2 + 2) * 1000;
+    const revealEndTime = Number(voteInfoBeforeFinalize[6]);
+    const waitTime2 = Math.max(0, (revealEndTime - now2 + 2) * 1000);
 
     if (waitTime2 > 0) {
         console.log(`⏳ Waiting ${Math.ceil(waitTime2 / 1000)} seconds...`);
+        console.log(`   Current time: ${now2}`);
+        console.log(`   Reveal end time: ${revealEndTime}`);
         await new Promise(resolve => setTimeout(resolve, waitTime2));
+    } else {
+        console.log(`⏭️  Reveal phase already ended`);
     }
 
     const finalizeTx = await votingGame.finalizeVote(voteId);

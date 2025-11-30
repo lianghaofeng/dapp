@@ -326,7 +326,7 @@ async function loadActiveVotes() {
             return;
         }
 
-        // Fetch option totals only for reveal phase
+        // Fetch option totals and participants
         for (let vote of votes) {
             vote.optionTotals = [];
             if (vote.stage >= 2) { // Only show in reveal phase or later
@@ -338,6 +338,14 @@ async function loadActiveVotes() {
                         vote.optionTotals.push(0n);
                     }
                 }
+            }
+
+            // Get participants list
+            try {
+                vote.participants = await contract.getParticipants(vote.id);
+            } catch (error) {
+                console.error(`Failed to get participants for vote ${vote.id}:`, error);
+                vote.participants = [];
             }
         }
 
@@ -384,10 +392,13 @@ function createVoteCard(vote) {
     const stageBadge = vote.stage === 1 ? 'commit' : vote.stage === 2 ? 'reveal' : 'finalized';
 
     let timeLeft = 0;
+    let endTime = 0;
     if (vote.stage === 1) {
         timeLeft = vote.commitEndTime - now;
+        endTime = vote.commitEndTime;
     } else if (vote.stage === 2) {
         timeLeft = vote.revealEndTime - now;
+        endTime = vote.revealEndTime;
     }
 
     const totalPool = ethers.formatEther(vote.totalBets);
@@ -400,13 +411,17 @@ function createVoteCard(vote) {
     // Check if user has revealed
     const userHasRevealed = userCommits[vote.id] && userCommits[vote.id].revealed;
 
+    // Participant count
+    const participantCount = vote.participants ? vote.participants.length : 0;
+
     return `
         <div class="vote-card">
             <h3>${escapeHtml(vote.question)}</h3>
             <div class="vote-meta">
                 <span class="badge ${stageBadge}">${VoteStage[vote.stage]}</span>
-                ${timeLeft > 0 ? `<span class="countdown">Time Left: ${formatTimeLeft(timeLeft)}</span>` :
-                  `<span class="countdown" style="color: #ff6666;">Ended</span>`}
+                ${timeLeft > 0 ?
+                    `<span class="countdown" data-end-time="${endTime}">Time Left: ${formatTimeLeft(timeLeft)}</span>` :
+                    `<span class="countdown" style="color: #ff6666;">Ended</span>`}
             </div>
             <div class="vote-meta">
                 <span class="vote-meta-item">
@@ -417,8 +432,28 @@ function createVoteCard(vote) {
                     <span class="vote-meta-label">Options:</span>
                     <span class="vote-meta-value">${vote.options.length}</span>
                 </span>
+                <span class="vote-meta-item">
+                    <span class="vote-meta-label">Participants:</span>
+                    <span class="vote-meta-value">${participantCount}</span>
+                </span>
             </div>
             <div class="total-pool">💰 Total Pool: ${totalPool} ETH</div>
+
+            ${participantCount > 0 ? `
+                <div class="vote-stats" style="margin-top: 15px;">
+                    <strong>👥 Participants:</strong>
+                    <div style="margin-top: 8px; max-height: 150px; overflow-y: auto;">
+                        ${vote.participants.map((addr, idx) => `
+                            <div style="padding: 5px; margin: 3px 0; background: #1a1a3a; border-left: 3px solid ${addr.toLowerCase() === userAddress?.toLowerCase() ? '#00ffff' : '#666'};">
+                                <span style="color: ${addr.toLowerCase() === userAddress?.toLowerCase() ? '#00ffff' : '#aaa'}; font-size: 10px;">
+                                    ${idx + 1}. ${addr.slice(0, 6)}...${addr.slice(-4)}
+                                    ${addr.toLowerCase() === userAddress?.toLowerCase() ? ' (You)' : ''}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
 
             ${vote.stage === 1 ? `
                 <div class="vote-stats">
@@ -729,7 +764,7 @@ async function loadHistoryVotes() {
                 const finalized = voteInfo[8];
 
                 if (finalized) {
-                    votes.push({
+                    const vote = {
                         id: Number(voteInfo[0]),
                         creator: voteInfo[1],
                         question: voteInfo[2],
@@ -738,7 +773,34 @@ async function loadHistoryVotes() {
                         totalBets: voteInfo[7],
                         finalized: finalized,
                         winningOption: Number(voteInfo[9])
-                    });
+                    };
+
+                    // Get participants and their choices
+                    try {
+                        vote.participants = await contract.getParticipants(i);
+                        vote.participantDetails = [];
+
+                        for (const addr of vote.participants) {
+                            try {
+                                const commitInfo = await contract.getCommit(i, addr);
+                                if (commitInfo[1]) { // revealed
+                                    vote.participantDetails.push({
+                                        address: addr,
+                                        choice: Number(commitInfo[2]),
+                                        betAmount: commitInfo[3]
+                                    });
+                                }
+                            } catch (error) {
+                                console.error(`Failed to get commit for ${addr}:`, error);
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Failed to get participants for vote ${i}:`, error);
+                        vote.participants = [];
+                        vote.participantDetails = [];
+                    }
+
+                    votes.push(vote);
                 }
             } catch (error) {
                 console.error(`Failed to get vote ${i}:`, error);
@@ -775,6 +837,18 @@ function createHistoryCard(vote) {
         vote.options[vote.winningOption] :
         'No Winner';
 
+    // Group participants by choice
+    const choiceGroups = {};
+    vote.options.forEach((_, idx) => {
+        choiceGroups[idx] = [];
+    });
+
+    vote.participantDetails.forEach(p => {
+        if (choiceGroups[p.choice]) {
+            choiceGroups[p.choice].push(p);
+        }
+    });
+
     return `
         <div class="vote-card">
             <h3>${escapeHtml(vote.question)}</h3>
@@ -788,16 +862,58 @@ function createHistoryCard(vote) {
                 </span>
                 <span class="vote-meta-item">
                     <span class="vote-meta-label">Winner:</span>
-                    <span class="vote-meta-value">${escapeHtml(winnerText)}</span>
+                    <span class="vote-meta-value" style="color: #00ff88;">${escapeHtml(winnerText)}</span>
+                </span>
+                <span class="vote-meta-item">
+                    <span class="vote-meta-label">Participants:</span>
+                    <span class="vote-meta-value">${vote.participantDetails.length}</span>
                 </span>
             </div>
+
+            ${vote.participantDetails.length > 0 ? `
+                <div class="vote-stats" style="margin-top: 15px;">
+                    <strong>📊 Detailed Results:</strong>
+                    ${vote.options.map((opt, idx) => {
+                        const participants = choiceGroups[idx] || [];
+                        const isWinner = vote.winningOption === idx;
+                        const totalForOption = participants.reduce((sum, p) => sum + parseFloat(ethers.formatEther(p.betAmount)), 0);
+
+                        return `
+                            <div style="margin-top: 12px; padding: 10px; background: ${isWinner ? '#1a3a2a' : '#1a1a3a'}; border-left: 4px solid ${isWinner ? '#00ff88' : '#666'};">
+                                <div style="margin-bottom: 8px;">
+                                    <strong style="color: ${isWinner ? '#00ff88' : '#00ffff'};">
+                                        ${escapeHtml(opt)} ${isWinner ? '👑 WINNER' : ''}
+                                    </strong>
+                                    <span style="color: #ffaa00; margin-left: 10px;">${totalForOption.toFixed(4)} ETH</span>
+                                    <span style="color: #888; margin-left: 10px;">(${participants.length} players)</span>
+                                </div>
+                                ${participants.length > 0 ? `
+                                    <div style="margin-left: 15px; font-size: 10px;">
+                                        ${participants.map(p => `
+                                            <div style="padding: 3px 0; color: ${p.address.toLowerCase() === userAddress?.toLowerCase() ? '#00ffff' : '#aaa'};">
+                                                • ${p.address.slice(0, 6)}...${p.address.slice(-4)}
+                                                ${p.address.toLowerCase() === userAddress?.toLowerCase() ? ' (You)' : ''}
+                                                - ${ethers.formatEther(p.betAmount)} ETH
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            ` : ''}
+
             ${userParticipated ? `
-                <div class="vote-stats">
-                    <strong>Your Choice:</strong> ${escapeHtml(vote.options[userCommits[vote.id].choice])}<br>
+                <div class="vote-stats" style="margin-top: 15px;">
+                    <strong>Your Participation:</strong>
+                    <div style="margin-top: 8px;">
+                        Choice: <span style="color: #00ffff;">${escapeHtml(vote.options[userCommits[vote.id].choice])}</span>
+                    </div>
                     ${userRevealed ? `
                         <button id="history-claim-btn-${vote.id}" style="margin-top: 10px;">Claim Reward</button>
                     ` : `
-                        <span style="color: #ff6666;">Did not reveal - No reward</span>
+                        <span style="color: #ff6666; display: block; margin-top: 8px;">Did not reveal - No reward</span>
                     `}
                 </div>
             ` : ''}
@@ -834,14 +950,39 @@ async function claimReward(voteId) {
     }
 }
 
-// Auto-refresh timer
+// Auto-refresh timer and countdown updater
 function startAutoRefreshTimer() {
+    // Update countdowns every second
+    setInterval(() => {
+        updateCountdowns();
+    }, 1000);
+
+    // Refresh vote data every 30 seconds
     setInterval(() => {
         const activeTab = document.querySelector('.tab.active');
         if (activeTab && activeTab.dataset.tab === 'active' && contract) {
             loadActiveVotes();
         }
     }, 30000);
+}
+
+// Update countdown timers
+function updateCountdowns() {
+    const countdowns = document.querySelectorAll('.countdown[data-end-time]');
+    const now = Math.floor(Date.now() / 1000);
+
+    countdowns.forEach(countdown => {
+        const endTime = parseInt(countdown.dataset.endTime);
+        const timeLeft = endTime - now;
+
+        if (timeLeft > 0) {
+            countdown.textContent = `Time Left: ${formatTimeLeft(timeLeft)}`;
+            countdown.style.color = '#ffaa00';
+        } else {
+            countdown.textContent = 'Ended';
+            countdown.style.color = '#ff6666';
+        }
+    });
 }
 
 // Auto-reveal mechanism
