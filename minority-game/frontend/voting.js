@@ -1,5 +1,5 @@
 // 合约配置
-const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // 部署后替换
+const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // 部署后替换,该合约地址有问题
 const CONTRACT_ABI = [
     "function createVote(string memory question, string[] memory options, uint256 commitDuration, uint256 revealDuration) external returns (uint256)",
     "function commit(uint256 voteId, bytes32 commitHash) external payable",
