@@ -118,26 +118,35 @@ async function connectWallet() {
         signer = await provider.getSigner();
         userAddress = await signer.getAddress();
 
+        console.log('🔗 Wallet connected:', userAddress);
+
         contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
         // Load commits for this wallet
         loadUserCommits();
+        console.log('📝 Loaded commits for wallet:', userAddress);
 
         showStatus('walletStatus', 'success', `✅ Connected: ${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`, true);
 
+        // Remove old listeners to avoid duplicates
+        window.ethereum.removeAllListeners('accountsChanged');
+        window.ethereum.removeAllListeners('chainChanged');
+
+        // Add new listeners
         window.ethereum.on('accountsChanged', handleAccountsChanged);
         window.ethereum.on('chainChanged', () => window.location.reload());
 
         loadActiveVotes();
 
     } catch (error) {
-        console.error('Wallet connection failed:', error);
+        console.error('❌ Wallet connection failed:', error);
         showStatus('walletStatus', 'error', 'Connection failed: ' + error.message, true);
     }
 }
 
 // Disconnect Wallet
 async function disconnectWallet() {
+    console.log('🔌 Disconnecting wallet...');
     provider = null;
     signer = null;
     contract = null;
@@ -145,6 +154,7 @@ async function disconnectWallet() {
     userCommits = {};
 
     showStatus('walletStatus', 'info', 'Disconnected', true);
+    console.log('✅ Wallet disconnected');
 }
 
 // Check Wallet Connection
@@ -162,11 +172,17 @@ async function checkWalletConnection() {
 }
 
 // Handle Account Changes
-function handleAccountsChanged(accounts) {
+async function handleAccountsChanged(accounts) {
+    console.log('🔄 Account changed detected:', accounts);
     if (accounts.length === 0) {
         disconnectWallet();
     } else {
-        window.location.reload();
+        // Force reconnect instead of reload to ensure clean state
+        console.log('🔄 Reconnecting wallet...');
+        await disconnectWallet();
+        setTimeout(async () => {
+            await connectWallet();
+        }, 100);
     }
 }
 
@@ -808,28 +824,56 @@ function createHistoryCard(vote) {
 // Claim Reward
 async function claimReward(voteId) {
     try {
+        // Verify current connection
+        const currentAddress = await signer.getAddress();
+        console.log('💰 Claiming reward for vote:', voteId);
+        console.log('📍 Current wallet address:', currentAddress);
+        console.log('📍 UserAddress variable:', userAddress);
+
+        // Safety check: ensure addresses match
+        if (currentAddress.toLowerCase() !== userAddress.toLowerCase()) {
+            console.error('⚠️ Address mismatch detected!');
+            alert('⚠️ Warning: Wallet address mismatch detected. Reconnecting...');
+            await connectWallet();
+            return;
+        }
+
         const reward = await contract.calculateReward(voteId, userAddress);
+        console.log('💎 Calculated reward:', ethers.formatEther(reward), 'ETH');
 
         if (reward === 0n) {
             alert('No reward available to claim. You may not have won or already claimed.');
             return;
         }
 
-        if (!confirm(`You will receive ${ethers.formatEther(reward)} ETH. Confirm claim?`)) {
+        // Get balance before claim
+        const balanceBefore = await provider.getBalance(currentAddress);
+        console.log('💵 Balance before claim:', ethers.formatEther(balanceBefore), 'ETH');
+
+        if (!confirm(`You will receive ${ethers.formatEther(reward)} ETH to address ${currentAddress.slice(0, 6)}...${currentAddress.slice(-4)}.\n\nConfirm claim?`)) {
             return;
         }
 
         const tx = await contract.claimReward(voteId);
+        console.log('📤 Transaction submitted:', tx.hash);
         alert('Transaction submitted, waiting for confirmation...');
 
-        await tx.wait();
-        alert('✅ Reward claimed successfully!');
+        const receipt = await tx.wait();
+        console.log('✅ Transaction confirmed in block:', receipt.blockNumber);
+
+        // Get balance after claim
+        const balanceAfter = await provider.getBalance(currentAddress);
+        const actualReceived = balanceAfter - balanceBefore;
+        console.log('💵 Balance after claim:', ethers.formatEther(balanceAfter), 'ETH');
+        console.log('💰 Actually received:', ethers.formatEther(actualReceived), 'ETH (including gas costs)');
+
+        alert(`✅ Reward claimed successfully!\n\nReceived: ${ethers.formatEther(reward)} ETH\nTo: ${currentAddress.slice(0, 6)}...${currentAddress.slice(-4)}`);
 
         loadHistoryVotes();
         loadActiveVotes();
 
     } catch (error) {
-        console.error('Claim reward failed:', error);
+        console.error('❌ Claim reward failed:', error);
         alert('Claim failed: ' + (error.reason || error.message));
     }
 }
