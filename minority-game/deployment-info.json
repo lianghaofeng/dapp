@@ -3,7 +3,7 @@
   "deployer": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
   "network": "localhost",
   "chainId": "1337",
-  "deployedAt": "2025-12-01T04:41:58.829Z",
+  "deployedAt": "2025-12-01T13:54:03.148Z",
   "blockNumber": 1,
   "note": "使用备用账户部署以避开MetaMask警告"
 }
