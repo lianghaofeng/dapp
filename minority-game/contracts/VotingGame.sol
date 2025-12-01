@@ -131,9 +131,42 @@ contract VotingGame is ReentrancyGuard {
         return voteId;
     }
 
+    // Internal function to update vote stage based on current time
+    function _updateStage(uint256 voteId) internal {
+        Vote storage vote = votes[voteId];
+
+        // Auto-transition from Committing to Revealing
+        if (vote.stage == VoteStage.Committing && block.timestamp >= vote.commitEndTime) {
+            vote.stage = VoteStage.Revealing;
+        }
+        // Auto-transition from Revealing to Finalized (for finalization)
+        // Note: Still requires explicit finalizeVote call to determine winner
+    }
+
+    // View function to get current stage based on time (doesn't modify state)
+    function _getCurrentStage(uint256 voteId) internal view returns (VoteStage) {
+        Vote storage vote = votes[voteId];
+
+        // If already finalized or claiming, return as is
+        if (vote.stage == VoteStage.Finalized || vote.stage == VoteStage.Claiming) {
+            return vote.stage;
+        }
+
+        // Check time-based transitions
+        if (vote.stage == VoteStage.Committing && block.timestamp >= vote.commitEndTime) {
+            return VoteStage.Revealing;
+        }
+
+        return vote.stage;
+    }
+
     function commit(uint256 voteId, bytes32 commitHash) external payable nonReentrant {
         Vote storage vote = votes[voteId];
         require(vote.voteId != 0, "Vote does not exist");
+
+        // Update stage based on time before checking
+        _updateStage(voteId);
+
         require(vote.stage == VoteStage.Committing, "Not in commit phase");
         require(block.timestamp < vote.commitEndTime, "Commit phase ended");
         require(commits[voteId][msg.sender].commitHash == bytes32(0), "Already committed");
@@ -152,12 +185,20 @@ contract VotingGame is ReentrancyGuard {
         emit CommitSubmitted(voteId, msg.sender, msg.value);
     }
 
+    // Note: This function is now optional as stage transitions happen automatically
+    // It's kept for backward compatibility and manual triggering if needed
     function startRevealPhase(uint256 voteId) external {
         Vote storage vote = votes[voteId];
         require(vote.voteId != 0, "Vote does not exist");
-        require(vote.stage == VoteStage.Committing, "Not in commit phase");
-        require(block.timestamp >= vote.commitEndTime, "Commit phase not ended");
-        vote.stage = VoteStage.Revealing;
+
+        // Update stage first (may already be in Revealing)
+        _updateStage(voteId);
+
+        // If still in Committing after update, check time requirement
+        if (vote.stage == VoteStage.Committing) {
+            require(block.timestamp >= vote.commitEndTime, "Commit phase not ended");
+            vote.stage = VoteStage.Revealing;
+        }
     }
 
     function reveal(
@@ -167,6 +208,10 @@ contract VotingGame is ReentrancyGuard {
     ) external nonReentrant {
         Vote storage vote = votes[voteId];
         require(vote.voteId != 0, "Vote does not exist");
+
+        // Update stage based on time before checking
+        _updateStage(voteId);
+
         require(vote.stage == VoteStage.Revealing, "Not in reveal phase");
         require(block.timestamp < vote.revealEndTime, "Reveal phase ended");
         require(choice < voteOptions[voteId].length, "Invalid choice");
@@ -288,7 +333,7 @@ contract VotingGame is ReentrancyGuard {
             creator: vote.creator,
             question: vote.question,
             options: voteOptions[voteId],
-            stage: vote.stage,
+            stage: _getCurrentStage(voteId),  // Use calculated stage based on time
             commitEndTime: vote.commitEndTime,
             revealEndTime: vote.revealEndTime,
             totalBets: vote.totalBets,
@@ -312,7 +357,7 @@ contract VotingGame is ReentrancyGuard {
         return (
             vote.question,
             voteOptions[voteId],
-            vote.stage,
+            _getCurrentStage(voteId),  // Use calculated stage based on time
             vote.commitEndTime,
             vote.revealEndTime
         );
