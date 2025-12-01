@@ -58,6 +58,8 @@ async function main() {
 
     // 自动更新前端配置
     console.log("\n🔧 正在自动更新前端配置...");
+
+    // 更新voting.js
     try {
         const votingJsPath = "./frontend/voting.js";
         let votingJsContent = fs.readFileSync(votingJsPath, "utf8");
@@ -72,9 +74,31 @@ async function main() {
             console.log("✅ frontend/voting.js 已自动更新合约地址!");
         }
     } catch (error) {
-        console.log("⚠️  自动更新前端失败，请手动更新:");
-        console.log(`   const CONTRACT_ADDRESS = "${contractAddress}";`);
+        console.log("⚠️  自动更新 voting.js 失败");
     }
+
+    // 更新voting-improved.js
+    try {
+        const votingImprovedJsPath = "./frontend/voting-improved.js";
+        if (fs.existsSync(votingImprovedJsPath)) {
+            let votingImprovedJsContent = fs.readFileSync(votingImprovedJsPath, "utf8");
+
+            // 替换合约地址
+            const addressRegex = /const CONTRACT_ADDRESS = "0x[a-fA-F0-9]{40}";/;
+            const newAddressLine = `const CONTRACT_ADDRESS = "${contractAddress}";`;
+
+            if (addressRegex.test(votingImprovedJsContent)) {
+                votingImprovedJsContent = votingImprovedJsContent.replace(addressRegex, newAddressLine);
+                fs.writeFileSync(votingImprovedJsPath, votingImprovedJsContent);
+                console.log("✅ frontend/voting-improved.js 已自动更新合约地址!");
+            }
+        }
+    } catch (error) {
+        console.log("⚠️  自动更新 voting-improved.js 失败");
+    }
+
+    console.log("\n📝 请手动确认前端文件中的合约地址已更新为:");
+    console.log(`   const CONTRACT_ADDRESS = "${contractAddress}";`);
 
     console.log("\n=== 🦊 MetaMask 配置说明 ===");
     console.log("1. 确保MetaMask连接到 Localhost 8545");
