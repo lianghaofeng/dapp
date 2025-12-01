@@ -143,7 +143,7 @@ contract VotingGame is ReentrancyGuard {
             commitHash: commitHash,
             revealed: false,
             choice: 0,
-            betAmount: msg.value
+            betAmount: msg.value //bet amount
         });
 
         participants[voteId].push(msg.sender);

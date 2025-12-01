@@ -374,7 +374,7 @@ across ${ANALYSIS_CONFIG.rounds} rounds with ${ANALYSIS_CONFIG.playersPerRound} 
 
     console.log(`\n${"=".repeat(60)}`);
     console.log("✅ Empirical Analysis Completed!");
-    console.log("=".repeat(60)}\n`);
+    console.log(`\n${"=".repeat(60)}`);
 }
 
 main()

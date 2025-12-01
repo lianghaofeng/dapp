@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-11-30T09:22:36.031Z",
+  "timestamp": "2025-11-30T10:23:15.843Z",
   "config": {
     "numPlayers": 10,
     "voteQuestion": "Which is the best crypto?",
@@ -55,22 +55,22 @@
     {
       "index": 5,
       "address": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
-      "choice": 1,
-      "choiceName": "Ethereum",
+      "choice": 0,
+      "choiceName": "Bitcoin",
       "betAmount": "0.25"
     },
     {
       "index": 6,
       "address": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
-      "choice": 0,
-      "choiceName": "Bitcoin",
+      "choice": 2,
+      "choiceName": "Solana",
       "betAmount": "0.1"
     },
     {
       "index": 7,
       "address": "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
-      "choice": 1,
-      "choiceName": "Ethereum",
+      "choice": 0,
+      "choiceName": "Bitcoin",
       "betAmount": "0.2"
     },
     {
@@ -103,17 +103,17 @@
       "Ethereum",
       "Solana"
     ],
-    "commitEndTime": 1764494616,
-    "revealEndTime": 1764494646
+    "commitEndTime": 1764498256,
+    "revealEndTime": 1764498286
   },
   "phases": {
     "commit": {
-      "duration": 47,
+      "duration": 35,
       "playerCount": 10,
       "totalBets": 2
     },
     "reveal": {
-      "duration": 38,
+      "duration": 81,
       "revealedCount": 8,
       "nonRevealedCount": 2,
       "revealRate": "80.00%"
@@ -121,44 +121,44 @@
     "finalize": {}
   },
   "analysis": {
-    "winner": "Bitcoin",
+    "winner": "Ethereum",
     "distribution": {
-      "0": 2,
-      "1": 4,
-      "2": 2
+      "0": 3,
+      "1": 2,
+      "2": 3
     },
     "optionTotals": [
-      "0.3",
-      "0.9",
-      "0.4"
+      "0.65",
+      "0.45",
+      "0.5"
     ],
     "minorityOption": {
-      "option": "Bitcoin",
+      "option": "Ethereum",
       "count": 2
     },
     "winnerCount": 2,
     "totalRewards": "1.6000",
     "averageReward": "0.8000",
     "profitMargin": {
-      "Player 2": "433.33%",
-      "Player 6": "433.33%"
+      "Player 3": "255.56%",
+      "Player 4": "255.56%"
     }
   },
-  "contractAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "contractAddress": "0x8464135c8F25Da09e49BC8782676a84730C318bC",
   "winners": [
     {
-      "playerIndex": 2,
-      "address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      "playerIndex": 3,
+      "address": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
       "reward": "1.066666666666666666",
-      "choice": "Bitcoin",
-      "betAmount": "0.2"
+      "choice": "Ethereum",
+      "betAmount": "0.3"
     },
     {
-      "playerIndex": 6,
-      "address": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+      "playerIndex": 4,
+      "address": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
       "reward": "0.533333333333333333",
-      "choice": "Bitcoin",
-      "betAmount": "0.1"
+      "choice": "Ethereum",
+      "betAmount": "0.15"
     }
   ]
 }
