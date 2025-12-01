@@ -950,3 +950,98 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// Global diagnostic function for Console access
+window.diagnoseConnection = async function() {
+    console.log('🔍 连接诊断\n================');
+
+    try {
+        // 1. Check if wallet is connected
+        if (!provider || !signer || !contract) {
+            console.log('❌ 钱包未连接！');
+            console.log('   请点击页面上的 "Connect MetaMask" 按钮');
+            return;
+        }
+
+        console.log('✅ 钱包已连接');
+
+        // 2. Check network
+        const network = await provider.getNetwork();
+        const chainId = network.chainId.toString();
+        console.log('\n1️⃣ 网络信息:');
+        console.log('   ChainID:', chainId);
+
+        if (chainId === '1337') {
+            console.log('   ✅ 正确连接到 Localhost');
+        } else if (chainId === '97') {
+            console.log('   ⚠️ 连接到 BSC 测试网！');
+            console.log('   → 这会导致看到旧的测试网数据');
+            console.log('   → 请在MetaMask中切换到 "Localhost 8545"');
+        } else if (chainId === '56') {
+            console.log('   ⚠️ 连接到 BSC 主网！');
+        } else {
+            console.log('   ⚠️ 未知网络');
+        }
+
+        // 3. Check contract address
+        console.log('\n2️⃣ 合约地址:', CONTRACT_ADDRESS);
+
+        // 4. Check vote count
+        const counter = await contract.voteCounter();
+        console.log('\n3️⃣ 投票总数:', counter.toString());
+
+        if (counter.toString() === '0') {
+            console.log('   ✅ 没有投票（新合约状态）');
+        } else {
+            console.log('   📊 有', counter.toString(), '个投票');
+
+            // Show details of each vote
+            for (let i = 1; i <= Number(counter); i++) {
+                try {
+                    const voteInfo = await contract.getVoteInfo(i);
+                    const now = Math.floor(Date.now() / 1000);
+                    const stage = Number(voteInfo[4]);
+                    const commitTimeLeft = Number(voteInfo[5]) - now;
+
+                    console.log(`\n   投票 #${i}:`);
+                    console.log('     问题:', voteInfo[2]);
+                    console.log('     阶段:', ['Active', '提交阶段', '揭示阶段', '已结束', '领奖阶段'][stage]);
+                    console.log('     Commit结束时间:', new Date(Number(voteInfo[5]) * 1000).toLocaleString());
+
+                    if (stage === 1) {
+                        if (commitTimeLeft > 0) {
+                            console.log('     ✅ Commit阶段进行中，剩余:', Math.floor(commitTimeLeft / 60), '分钟');
+                        } else {
+                            console.log('     ⚠️ Commit时间已到，但阶段未转换（这可能是bug）');
+                        }
+                    }
+
+                    console.log('     创建时间:', new Date(Number(voteInfo[10]) * 1000).toLocaleString());
+                } catch (error) {
+                    console.error(`   ❌ 获取投票 #${i} 失败:`, error.message);
+                }
+            }
+        }
+
+        // 5. Check wallet address
+        const address = await signer.getAddress();
+        console.log('\n4️⃣ 当前钱包:', address);
+
+        // 6. Check localStorage
+        const storedCommits = localStorage.getItem('allUserCommits');
+        if (storedCommits) {
+            const parsed = JSON.parse(storedCommits);
+            const userCommitKeys = Object.keys(parsed[address.toLowerCase()] || {});
+            console.log('\n5️⃣ localStorage中的commit数据:');
+            console.log('   保存的投票ID:', userCommitKeys.length > 0 ? userCommitKeys.join(', ') : '无');
+        }
+
+        console.log('\n================');
+        console.log('✅ 诊断完成');
+
+    } catch (error) {
+        console.error('❌ 诊断失败:', error.message);
+    }
+}
+
+console.log('💡 诊断函数已加载！在Console中执行: diagnoseConnection()');
